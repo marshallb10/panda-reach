@@ -1,0 +1,23 @@
+<workflow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns="http://levelsbeyond.com/schema/workflow"
+          xmlns:nimbus="http://levelsbeyond.com/schema/workflow/nimbus"
+          xsi:schemaLocation="http://levelsbeyond.com/schema/workflow http://www.levelsbeyond.com/schema/latest/studio.xsd"
+          id="pandaIngestAsset"
+          name="Ingest Asset"
+          executionLabelExpression="Ingest Asset - ${fileToIngest.name}"
+          description=""
+          showInUserInterface="true"
+          subjectDOClassName=""
+          subjectQualifierExpression=""
+          sdkVersion="">
+
+    <initialStepName></initialStepName>
+
+    <noopStep name="end"/>
+
+    <!-- Input -->
+
+
+    <!-- Internal -->
+
+</workflow>

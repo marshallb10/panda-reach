@@ -1,0 +1,11 @@
+*.ipr
+*.iml
+*.iws
+.DS_Store
+.project
+*.orig
+.xpr
+*.DS_Store
+.idea
+*.bak
+.com.apple.timemachine.supported
