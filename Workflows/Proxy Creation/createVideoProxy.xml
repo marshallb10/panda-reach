@@ -1,0 +1,187 @@
+<workflow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns="http://levelsbeyond.com/schema/workflow"
+		  xsi:schemaLocation="http://levelsbeyond.com/schema/workflow http://www.levelsbeyond.com/schema/latest/studio.xsd"
+          id="createVideoProxy"
+          name="Create Video Proxy"
+          executionLabelExpression="Create proxy of video ${subject.name}"
+          description=""
+          subjectDOClassName="VideoAssetMaster"
+          showInUserInterface="true"
+          deadlineExpression=""
+          sdkVersion="">
+
+	<initialStepName>create proxy</initialStepName>
+
+	<!-- BEGIN Proxy -->
+	<convertVideoStep
+			name="create proxy"
+			executionLabelExpression="Transcode ${sourceFile.name} to proxy"
+			sourceFileExpression="${sourceFile}"
+			mediaConversionTemplateExpression="${proxyTemplate}"
+			continueOnException="true"
+			resultDataDef="proxyResult">
+		<transition condition="${#fileExists(proxyResult) and (#proxyContent(subject.currentVersion))?.file?.exists()}">
+			<targetStepName>delete existing proxy</targetStepName>
+		</transition>
+		<transition condition="${#fileExists(proxyResult)}">
+			<targetStepName>copy proxy to repo</targetStepName>
+		</transition>
+		<transition condition="true">
+			<targetStepName>fail creating proxy</targetStepName>
+		</transition>
+	</convertVideoStep>
+
+	<deleteFileStep
+			name="delete existing proxy"
+			sourceFilesExpression="${(#proxyContent(subject.currentVersion)).file}"
+			continueOnException="true"
+			nextStep="copy proxy to repo"/>
+
+	<copyFileStep
+			name="copy proxy to repo"
+			sourceFileExpression="${proxyResult}"
+			targetDirectoryExpression="${customRepoProxies}"
+			resultDataDef="proxyFile"
+			nextStep="save proxy"/>
+
+	<saveAssetStep
+			name="save proxy"
+			executionLabelExpression="Save transcode result ${proxyFile.absolutePath} to repository"
+			contentExpression="${proxyFile}"
+			contentUseExpression="Proxy"
+			versionAssetExpression="${false}"
+			assetExpression="${subject}"
+			nextStep="delete proxy transcode result"/>
+
+	<deleteFileStep
+			name="delete proxy transcode result"
+			sourceFilesExpression="${proxyResult}"
+			nextStep="create thumb mov"/>
+	<!-- END Proxy -->
+
+	<!-- BEGIN Thumb Mov -->
+	<convertVideoStep
+			name="create thumb mov"
+			executionLabelExpression="Transcode ${proxyFile.name} to thumbnail video"
+			sourceFileExpression="${proxyFile}"
+			mediaConversionTemplateExpression="${thumbnailMovTemplate}"
+			continueOnException="true"
+			resultDataDef="thumbMovResult">
+		<transition condition="${#fileExists(thumbMovResult) and (#thumbnailMovContent(subject.currentVersion))?.file?.exists()}">
+			<targetStepName>delete existing thumb mov</targetStepName>
+		</transition>
+		<transition condition="${#fileExists(thumbMovResult)}">
+			<targetStepName>copy thumb mov to repo</targetStepName>
+		</transition>
+		<transition condition="true">
+			<targetStepName>fail creating thumb mov</targetStepName>
+		</transition>
+	</convertVideoStep>
+
+	<deleteFileStep
+			name="delete existing thumb mov"
+			sourceFilesExpression="${(#thumbnailMovContent(subject.currentVersion)).file}"
+			continueOnException="true"
+			nextStep="copy thumb mov to repo"/>
+
+	<copyFileStep
+			name="copy thumb mov to repo"
+			sourceFileExpression="${thumbMovResult}"
+			targetDirectoryExpression="${customRepoProxies}"
+			resultDataDef="thumbMovFile"
+			nextStep="save thumb mov"/>
+
+	<saveAssetStep
+			name="save thumb mov"
+			executionLabelExpression="Save thumb mov ${thumbMovFile.name} to repository"
+			contentExpression="${thumbMovFile}"
+			contentUseExpression="Thumbnail Video"
+			versionAssetExpression="${false}"
+			assetExpression="${subject}"
+			nextStep="delete thumb mov transcode result"/>
+
+	<deleteFileStep
+			name="delete thumb mov transcode result"
+			sourceFilesExpression="${thumbMovResult}"
+			nextStep="create thumb jpg"/>
+	<!-- END Thumb Mov -->
+
+	<!-- BEGIN Thumb Jpg -->
+	<convertImageStep
+			name="create thumb jpg"
+			sourceFileExpression="${thumbMovFile}"
+			resultDataDef="thumbJpgResult"
+			thumbnailPercentageExpression="${thumbnailPercentage}"
+			continueOnException="true">
+		<transition condition="${#fileExists(thumbJpgResult) and (#thumbnailContent(subject.currentVersion))?.file?.exists()}">
+			<targetStepName>delete existing thumb jpg</targetStepName>
+		</transition>
+		<transition condition="${#fileExists(thumbJpgResult)}">
+			<targetStepName>copy thumb jpg to repo</targetStepName>
+		</transition>
+		<transition condition="true">
+			<targetStepName>fail creating thumb jpg</targetStepName>
+		</transition>
+	</convertImageStep>
+
+	<deleteFileStep
+			name="delete existing thumb jpg"
+			sourceFilesExpression="${(#thumbnailContent(subject.currentVersion)).file}"
+			continueOnException="true"
+			nextStep="copy thumb jpg to repo"/>
+
+	<copyFileStep
+			name="copy thumb jpg to repo"
+			sourceFileExpression="${thumbJpgResult}"
+			targetDirectoryExpression="${customRepoProxies}"
+			resultDataDef="thumbJpgFile"
+			nextStep="save thumb jpg"/>
+
+	<saveAssetStep
+			name="save thumb jpg"
+			executionLabelExpression="Save thumb jpg ${thumbJpgFile.name} to repository"
+			contentExpression="${thumbJpgFile}"
+			contentUseExpression="Thumbnail"
+			versionAssetExpression="${false}"
+			assetExpression="${subject}"
+			nextStep="delete thumb jpg transcode result"/>
+
+	<deleteFileStep
+			name="delete thumb jpg transcode result"
+			sourceFilesExpression="${thumbJpgResult}"
+			nextStep="reindex"/>
+	<!-- END Thumb Jpg -->
+
+	<raiseWorkflowEventStep
+			name="reindex"
+			eventTypeExpression="ensureIndexed"
+			executionLabelExpression="Ensure Asset Indexed"
+			nextStep="end">
+		<property name="indexTargetRef">${subject}</property>
+	</raiseWorkflowEventStep>
+
+
+	<failWorkflowStep name="fail creating proxy" reasonExpression="Failed to create proxy"/>
+	<failWorkflowStep name="fail creating thumb mov" reasonExpression="Failed to create thumb mov"/>
+	<failWorkflowStep name="fail creating thumb jpg" reasonExpression="Failed to create thumb jpg"/>
+
+	<noopStep name="end"/>
+
+	<!-- Input -->
+	<contextDataDef name="sourceFile" dataType="File" defaultDataExpression="${#mezzanineContent(subject) != null ? #mezzanineContent(subject).file : subject.originalContent.file}"/>
+	<contextDataDef name="customRepoProxies" dataType="String" defaultDataExpression="${#filepath(sourceFile.absolutePath).replace(#sysconfig('filesystem.root.sources'), #sysconfig('filesystem.root.proxies'))}"/>
+
+	<!-- Internal -->
+	<contextDataDef name="proxyTemplate" dataType="String" defaultDataExpression="${#sysconfig('import.proxySettingName')}"/>
+	<contextDataDef name="proxyResult" dataType="File"/>
+	<contextDataDef name="proxyFile" dataType="File"/>
+
+	<contextDataDef name="thumbnailMovTemplate" dataType="String" defaultDataExpression="${#sysconfig('import.thumbnailMovSettingName')}"/>
+	<contextDataDef name="thumbMovResult" dataType="File"/>
+	<contextDataDef name="thumbMovFile" dataType="File"/>
+
+	<contextDataDef name="thumbJpgResult" dataType="File"/>
+	<contextDataDef name="thumbJpgFile" dataType="File"/>
+	<contextDataDef name="thumbnailPercentage" dataType="Integer" defaultDataExpression="0"/>
+
+</workflow>

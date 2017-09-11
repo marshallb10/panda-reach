@@ -11,13 +11,183 @@
           subjectQualifierExpression=""
           sdkVersion="">
 
-    <initialStepName></initialStepName>
+    <initialStepName>get exif data</initialStepName>
+
+    <runCommandStep
+            name="get exif data"
+            executionLabelExpression="Extracting exif.. Result: ${exifMeta.toString().length() > 3500 ? exifMeta.toString().substring(exifMeta.toString().length() - 3500) : exifMeta.toString()}"
+            executablePathExpression="${#sysconfig('exiftool.path')}"
+            stdoutDataDef="exifMetaJson">
+        <transition condition="${exifMetaJson != null and exifMetaJson.size() > 0}">
+            <targetStepName>set dates</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>check for existing source</targetStepName>
+        </transition>
+        <arg>${fileToIngest.absolutePath}</arg>
+        <arg>-j</arg>
+    </runCommandStep>
+
+    <setContextData
+            name="set dates"
+            executionLabelExpression="Create Date = ${createDate}. Year = ${#formatDate('yyyy', createDate)}. Month = ${#formatDate('MMMM', createDate)}. Day = ${#formatDate('d', createDate)}. Day of week = ${#formatDate('EEEE', createDate)}.">
+        <transition condition="${createDate != null}">
+            <targetStepName>update date path</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>check for existing source</targetStepName>
+        </transition>
+        <set targetDataDef="createDate" valueExpression="${#parseDate(exifMetaJson.CreateDate, 'yyyy:MM:dd')}"/>
+        <set targetDataDef="localDateTime" valueExpression="${exifMetaJson.CreateDate}"/>
+    </setContextData>
+
+    <setContextData
+            name="update date path"
+            targetDataDef="datePath"
+            valueExpression="${#formatDate('yyyy/MM/dd', createDate)}/"
+            nextStep="update repo paths"/>
+
+    <setContextData
+            name="update repo paths"
+            nextStep="check for existing source">
+        <set targetDataDef="sourceRepoPath" valueExpression="${#sysconfig('filesystem.root.sources')}/${datePath}"/>
+        <set targetDataDef="proxyRepoPath" valueExpression="${#sysconfig('filesystem.root.proxies')}/${datePath}"/>
+    </setContextData>
+
+    <noopStep
+            name="check for existing source"
+            executionLabelExpression="Source already in repo (${sourceRepoPath + fileName})? ${#fileExists(sourceRepoPath + fileName)}">
+        <transition condition="${#fileExists(sourceRepoPath + fileName)}">
+            <targetStepName>copy to duplicates</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>copy to source repo</targetStepName>
+        </transition>
+    </noopStep>
+
+    <copyFileStep
+            name="copy to duplicates"
+            sourceFileExpression="${fileToIngest}"
+            targetDirectoryExpression="${#sysconfig('filesystem.root.duplicates')}"
+            nextStep="end"/>
+    
+    <copyFileStep 
+            name="copy to source repo"
+            executionLabelExpression="Copy file to repo: ${fileToIngest.absolutePath}"
+            sourceFileExpression="${fileToIngest}" 
+            targetDirectoryExpression="${sourceRepoPath}"
+            resultDataDef="fileToIngest"
+            nextStep="ingest file"/>
+
+    <saveAssetStep
+            name="ingest file"
+            executionLabelExpression="Ingesting file ${fileToIngest.path}"
+            contentExpression="${fileToIngest}"
+            contentUseExpression="|SOURCE|MEZZANINE|"
+            resultDataDef="assetVersion">
+        <transition
+                condition="${exifMetaJson.GPSCoordinates != null or (exifMetaJson.GPSLatitude != null and exifMetaJson.GPSLongitude != null and exifMetaJson.GPSAltitude != null)}">
+            <targetStepName>set gps coordinates</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>save metadata</targetStepName>
+        </transition>
+    </saveAssetStep>
+
+    <setContextData
+            name="set gps coordinates"
+            targetDataDef="gPSCoordinates"
+            valueExpression="${exifMetaJson.GPSCoordinates != null ? exifMetaJson.GPSCoordinates : exifMetaJson.GPSLatitude + ', ' + exifMetaJson.GPSLongitude + ', ' + exifMetaJson.GPSAltitude}"
+            nextStep="save metadata"/>
+
+    <saveDataObjectStep
+            name="save metadata"
+            dataObjectExpression="${assetVersion.masterAsset.metadata}">
+        <transition condition="${mediaType == 'VIDEO'}">
+            <targetStepName>create video proxies</targetStepName>
+        </transition>
+        <transition condition="${mediaType == 'AUDIO'}">
+            <targetStepName>create audio proxy</targetStepName>
+        </transition>
+        <transition condition="${mediaType == 'IMAGE'}">
+            <targetStepName>create image proxy</targetStepName>
+        </transition>
+        <transition condition="${true}">
+            <targetStepName>reindex</targetStepName>
+        </transition>
+        <property name="createDate">${createDate}</property>
+        <property name="year">${#formatDate('yyyy', createDate)}</property>
+        <property name="month">${#formatDate('MMMM', createDate)}</property>
+        <property name="day">${#formatDate('d', createDate)}</property>
+        <property name="dayOfWeek">${#formatDate('EEEE', createDate)}</property>
+        <property name="fileName">${fileName}</property>
+        <property name="localDateTime">${localDateTime}</property>
+        <property name="gPSCoordinates">${gPSCoordinates}</property>
+    </saveDataObjectStep>
+
+    <executeSubflowStep
+            name="create video proxies"
+            executionLabelExpression="Creating video proxies"
+            targetWorkflowId="createVideoProxy"
+            subjectChangePath="${assetVersion.masterAsset}"
+            nextStep="reindex">
+        <subflowContextDataMapping parentDataDef="proxyRepoPath" subflowDataDef="customRepoProxies"/>
+    </executeSubflowStep>
+
+    <executeSubflowStep
+            name="create audio proxy"
+            targetWorkflowId="createAudioProxy"
+            subjectChangePath="${assetVersion.masterAsset}"
+            nextStep="reindex">
+        <subflowContextDataMapping parentDataDef="proxyRepoPath" subflowDataDef="customRepoProxies"/>
+    </executeSubflowStep>
+
+    <executeSubflowStep
+            name="create image proxy"
+            targetWorkflowId="createImageProxy"
+            subjectChangePath="${assetVersion.masterAsset}"
+            nextStep="reindex">
+        <subflowContextDataMapping parentDataDef="proxyRepoPath" subflowDataDef="customRepoProxies"/>
+    </executeSubflowStep>
+
+    <raiseWorkflowEventStep
+            name="reindex"
+            eventTypeExpression="ensureIndexed"
+            executionLabelExpression="Ensure Asset Indexed">
+        <transition condition="${assetVersion.masterAsset.metadata.gPSCoordinates != null}">
+            <targetStepName>set location from gps coordinates</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>end</targetStepName>
+        </transition>
+        <property name="indexTargetRef">${assetVersion.masterAsset}</property>
+    </raiseWorkflowEventStep>
+    
+    <executeSubflowStep
+            name="set location from gps coordinates"
+            targetWorkflowId="setLocationFromGPS"
+            subjectChangePath="${assetVersion.masterAsset}"
+            nextStep="end"/>
 
     <noopStep name="end"/>
 
     <!-- Input -->
-
+    <contextDataDef name="fileToIngest" dataType="File" userInput="true" required="true"/>
 
     <!-- Internal -->
+    <contextDataDef name="mediaType" dataType="String" defaultDataExpression="${#mediaType(fileToIngest)}"/>
+    <contextDataDef name="exifMetaJson" dataType="JSON"/>
 
+    <contextDataDef name="createDate" dataType="Date/Time"/>
+    <contextDataDef name="localDateTime" dataType="String"/>
+    <contextDataDef name="fileName" dataType="String" defaultDataExpression="${#filename(fileToIngest)}"/>
+
+    <contextDataDef name="datePath" dataType="String" defaultDataExpression="${#formatDate('yyyy/MM/dd', #newDate())}/"/>
+    <contextDataDef name="sourceRepoPath" dataType="String" defaultDataExpression="${#sysconfig('filesystem.root.sources')}/${datePath}"/>
+    <contextDataDef name="proxyRepoPath" dataType="String" defaultDataExpression="${#sysconfig('filesystem.root.proxies')}/${datePath}"/>
+
+    <contextDataDef name="existingSource" dataType="File"/>
+    <contextDataDef name="assetVersion" dataType="Data Object"/>
+
+    <contextDataDef name="gPSCoordinates" dataType="String"/>
 </workflow>

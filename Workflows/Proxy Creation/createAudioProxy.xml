@@ -1,0 +1,103 @@
+<workflow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		  xmlns="http://levelsbeyond.com/schema/workflow"
+		  xsi:schemaLocation="http://levelsbeyond.com/schema/workflow http://levelsbeyond.com/schema/latest/studio.xsd"
+		  id="createAudioProxy"
+		  name="Create Audio Proxy"
+		  executionLabelExpression="Create proxy of video ${subject.name}"
+		  description=""
+		  subjectDOClassName="AudioAssetMaster"
+		  showInUserInterface="false"
+		  deadlineExpression=""
+		  sdkVersion="">
+
+	<initialStepName>check for source file copy</initialStepName>
+
+	<noopStep name="check for source file copy">
+		<transition condition="=sourceCopyPath != null">
+			<targetStepName>copy source video</targetStepName>
+		</transition>
+		<transition condition="=true">
+			<targetStepName>create proxy</targetStepName>
+		</transition>
+	</noopStep>
+
+	<copyFileStep
+		name="copy source video"
+		executionLabelExpression="Copy video file ${subject.file.name}}"
+		sourceFileExpression="=subject"
+		targetDirectoryExpression="=sourceCopyPath"
+		pctComplete="20"
+		resultDataDef="transcodeSourceFile">
+
+		<transition condition="=true">
+			<targetStepName>create proxy</targetStepName>
+		</transition>
+	</copyFileStep>
+
+	<convertAudioStep
+		name="create proxy"
+		executionLabelExpression="Transcode ${transcodeSourceFile.name} to proxy"
+		sourceFileExpression="=transcodeSourceFile"
+		mediaConversionTemplateExpression="${proxyTemplate}"
+		pctComplete="80"
+		resultDataDef="transcodeResultFile"
+		priorityExpression="${priority}">
+
+		<transition condition="${customRepoProxies != null}">
+			<targetStepName>move file to custom repo</targetStepName>
+		</transition>
+		<transition condition="=true">
+			<targetStepName>save proxy to repository</targetStepName>
+		</transition>
+	</convertAudioStep>
+
+	<!-- customRepo subflow -->
+	<executeSubflowStep
+		name="move file to custom repo"
+		targetWorkflowId="_moveToCustomRepo" 
+		resultDataDef="transcodeResultFile"
+		>
+		<transition condition="true">
+			<targetStepName>save proxy to repository</targetStepName>
+		</transition>
+		<subflowContextDataMapping parentDataDef="transcodeResultFile" subflowDataDef="fileToIngest"/>
+		<subflowContextDataMapping parentDataDef="customRepoProxies" subflowDataDef="repoDirectoryString"/>
+	</executeSubflowStep>
+
+	<saveAssetStep
+		name="save proxy to repository"
+		executionLabelExpression="Save transcode result ${transcodeResultFile.name} to repository"
+		contentExpression="=transcodeResultFile"
+		contentUseExpression="Proxy"
+		pctComplete="95"
+		versionAssetExpression="=false"
+		assetExpression="${subject}">
+		
+		<transition condition="${customRepoProxies != null}">
+			<targetStepName>end</targetStepName>
+		</transition>
+		<transition condition="=true">
+			<targetStepName>delete transcode artifact</targetStepName>
+		</transition>
+	</saveAssetStep>
+
+	<deleteFileStep 
+		name="delete transcode artifact" 
+		sourceFilesExpression="${transcodeResultFile}" 
+		continueOnException="true">
+		
+		<transition condition="true">
+			<targetStepName>end</targetStepName>
+		</transition>
+	</deleteFileStep>
+
+	<noopStep name="end"/>
+
+	<contextDataDef name="sourceCopyPath" dataType="Directory"/>
+	<contextDataDef name="proxyTemplate" dataType="String" defaultDataExpression="${#sysconfig('import.audioProxySettingName')}"/>
+	<contextDataDef name="transcodeSourceFile" dataType="File" defaultDataExpression="=subject.originalContent.file"/>
+	<contextDataDef name="transcodeResultFile" dataType="File"/>
+	<contextDataDef name="priority" dataType="Integer"/>
+	<contextDataDef name="customRepoProxies" dataType="String"/>
+	
+</workflow>

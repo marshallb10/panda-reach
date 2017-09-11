@@ -1,0 +1,12 @@
+{
+  "name": "photoDrop",
+  "enabled": true,
+  "watchFolder": "/Volumes/Passport/PhotoDrop/",
+  "maxConcurrent": 5,
+  "deleteOnSuccess": true,
+  "processFolders": true,
+  "pollIntervalSeconds": 30,
+  "workflowKey": "pandaIngestAsset",
+  "fileDataDef": "fileToIngest",
+  "requireFileLock": false
+}

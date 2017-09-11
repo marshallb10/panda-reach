@@ -1,0 +1,131 @@
+<workflow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns="http://levelsbeyond.com/schema/workflow" 
+          xmlns:nimbus="http://levelsbeyond.com/schema/workflow/nimbus"
+		  xsi:schemaLocation="http://levelsbeyond.com/schema/workflow http://www.levelsbeyond.com/schema/latest/studio.xsd"
+		  id="createImageProxy"
+		  name="Create Image Proxy"
+          executionLabelExpression="Craete Image Proxy for ${assetMaster.name}"
+          description="" 
+          subjectDOClassName="ImageAssetMaster"
+          showInUserInterface="false" 
+          deadlineExpression=""
+		  sdkVersion="">
+
+	<initialStepName>create proxy</initialStepName>
+
+	<convertImageStep
+			name="create proxy"
+			sourceFileExpression="${sourceFile}"
+			targetExtensionExpression="jpg"
+			imageMagickParamsExpression="${imageProxyArguments}"
+			resultDataDef="proxyResult"
+			continueOnException="true">
+		<transition condition="${#fileExists(proxyResult) and (#fileExists(#proxyContent(subject.currentVersion)?.file)}">
+			<targetStepName>delete existing proxy</targetStepName>
+		</transition>
+		<transition condition="${#fileExists(proxyResult)}">
+			<targetStepName>copy proxy to repo</targetStepName>
+		</transition>
+		<transition condition="true">
+			<targetStepName>fail creating proxy</targetStepName>
+		</transition>
+	</convertImageStep>
+
+	<deleteFileStep
+			name="delete existing proxy"
+			sourceFilesExpression="${#proxyContent(subject.currentVersion).file}"
+			continueOnException="true"
+			nextStep="copy proxy to repo"/>
+
+	<copyFileStep
+			name="copy proxy to repo"
+			sourceFileExpression="${proxyResult}"
+			targetDirectoryExpression="${customRepoProxies}"
+			resultDataDef="proxyFile"
+			nextStep="save proxy"/>
+
+	<saveAssetStep
+			name="save proxy"
+			executionLabelExpression="Save result ${proxyFile.absolutePath} to repository"
+			contentExpression="${proxyFile}"
+			contentUseExpression="Proxy"
+			versionAssetExpression="${false}"
+			assetExpression="${subject}"
+			nextStep="delete proxy transcode result"/>
+
+	<deleteFileStep
+			name="delete proxy transcode result"
+			sourceFilesExpression="${proxyResult}"
+			nextStep="create thumb"/>
+
+	<convertImageStep
+			name="create thumb"
+			sourceFileExpression="${sourceFile}"
+			resultDataDef="thumbResult"
+			imageMagickParamsExpression="${imageThumbArguments}"
+			continueOnException="true">
+		<transition condition="${#fileExists(thumbResult) and (#fileExists(#thumbnailContent(subject.currentVersion)?.file)}">
+			<targetStepName>delete existing thumb</targetStepName>
+		</transition>
+		<transition condition="${#fileExists(thumbResult)}">
+			<targetStepName>copy thumb to repo</targetStepName>
+		</transition>
+		<transition condition="true">
+			<targetStepName>fail creating thumb</targetStepName>
+		</transition>
+	</convertImageStep>
+
+	<deleteFileStep
+			name="delete existing thumb"
+			sourceFilesExpression="${(#thumbnailContent(subject.currentVersion)).file}"
+			continueOnException="true"
+			nextStep="copy thumb to repo"/>
+
+	<copyFileStep
+			name="copy thumb to repo"
+			sourceFileExpression="${thumbResult}"
+			targetDirectoryExpression="${customRepoProxies}"
+			resultDataDef="thumbFile"
+			nextStep="save thumb"/>
+
+	<saveAssetStep
+			name="save thumb"
+			executionLabelExpression="Save thumb jpg ${thumbFile.name} to repository"
+			contentExpression="${thumbFile}"
+			contentUseExpression="Thumbnail"
+			versionAssetExpression="${false}"
+			assetExpression="${subject}"
+			nextStep="delete thumb transcode result"/>
+
+	<deleteFileStep
+			name="delete thumb transcode result"
+			sourceFilesExpression="${thumbResult}"
+			nextStep="reindex"/>
+
+	<raiseWorkflowEventStep
+			name="reindex"
+			eventTypeExpression="ensureIndexed"
+			executionLabelExpression="Ensure Asset Indexed"
+			nextStep="end">
+		<property name="indexTargetRef">${subject}</property>
+	</raiseWorkflowEventStep>
+    
+
+	<failWorkflowStep name="fail creating proxy" reasonExpression="Failed to create proxy."/>
+	<failWorkflowStep name="fail creating thumb" reasonExpression="Failed to create thumb."/>
+
+	<noopStep name="end"/>
+
+	<!-- Input -->
+	<contextDataDef name="sourceFile" dataType="File" defaultDataExpression="${subject.originalContent.file}"/>
+	<contextDataDef name="customRepoProxies" dataType="String" defaultDataExpression="${#filepath(sourceFile.absolutePath).replace(#sysconfig('filesystem.root.sources'), #sysconfig('filesystem.root.proxies'))}"/>
+
+	<!-- Internal -->
+	<contextDataDef name="imageProxyArguments" dataType="String" defaultDataExpression="${#sysconfig('imageAsset.proxyArguments')}"/>
+	<contextDataDef name="proxyResult" dataType="File"/>
+	<contextDataDef name="proxyFile" dataType="File"/>
+
+	<contextDataDef name="imageThumbArguments" dataType="String" defaultDataExpression="${#sysconfig('imageAsset.thumbArguments')}"/>
+	<contextDataDef name="thumbResult" dataType="File"/>
+	<contextDataDef name="thumbFile" dataType="File"/>
+</workflow>
