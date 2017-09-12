@@ -18,7 +18,7 @@
             executionLabelExpression="Extracting exif.. Result: ${exifMeta.toString().length() > 3500 ? exifMeta.toString().substring(exifMeta.toString().length() - 3500) : exifMeta.toString()}"
             executablePathExpression="${#sysconfig('exiftool.path')}"
             stdoutDataDef="exifMetaJson">
-        <transition condition="${exifMetaJson != null and exifMetaJson.size() > 0}">
+        <transition condition="${exifMetaJson != null and exifMetaJson.size() > 0 and exifMetaJson.CreateDate != null}">
             <targetStepName>set dates</targetStepName>
         </transition>
         <transition condition="true">
@@ -68,21 +68,27 @@
     <copyFileStep
             name="copy to duplicates"
             sourceFileExpression="${fileToIngest}"
-            targetDirectoryExpression="${#sysconfig('filesystem.root.duplicates')}"
-            nextStep="end"/>
+            targetDirectoryExpression="${#sysconfig('filesystem.root.duplicates')}">
+        <transition condition="${deleteUponSuccess and fileInRepo != null}">
+            <targetStepName>delete original file</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>end</targetStepName>
+        </transition>
+    </copyFileStep>
     
     <copyFileStep 
             name="copy to source repo"
             executionLabelExpression="Copy file to repo: ${fileToIngest.absolutePath}"
             sourceFileExpression="${fileToIngest}" 
             targetDirectoryExpression="${sourceRepoPath}"
-            resultDataDef="fileToIngest"
+            resultDataDef="fileInRepo"
             nextStep="ingest file"/>
 
     <saveAssetStep
             name="ingest file"
-            executionLabelExpression="Ingesting file ${fileToIngest.path}"
-            contentExpression="${fileToIngest}"
+            executionLabelExpression="Ingesting file ${fileInRepo.path}"
+            contentExpression="${fileInRepo}"
             contentUseExpression="|SOURCE|MEZZANINE|"
             resultDataDef="assetVersion">
         <transition
@@ -157,22 +163,38 @@
         <transition condition="${assetVersion.masterAsset.metadata.gPSCoordinates != null}">
             <targetStepName>set location from gps coordinates</targetStepName>
         </transition>
+        <transition condition="${deleteUponSuccess and fileInRepo != null}">
+            <targetStepName>delete original file</targetStepName>
+        </transition>
         <transition condition="true">
             <targetStepName>end</targetStepName>
         </transition>
         <property name="indexTargetRef">${assetVersion.masterAsset}</property>
     </raiseWorkflowEventStep>
-    
+
     <executeSubflowStep
             name="set location from gps coordinates"
             targetWorkflowId="setLocationFromGPS"
-            subjectChangePath="${assetVersion.masterAsset}"
+            subjectChangePath="${assetVersion.masterAsset}">
+        <transition condition="${deleteUponSuccess and fileInRepo != null}">
+            <targetStepName>delete original file</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>end</targetStepName>
+        </transition>
+    </executeSubflowStep>
+
+    <deleteFileStep
+            name="delete original file"
+            sourceFilesExpression="${fileToIngest}"
             nextStep="end"/>
+
 
     <noopStep name="end"/>
 
     <!-- Input -->
     <contextDataDef name="fileToIngest" dataType="File" userInput="true" required="true"/>
+    <contextDataDef name="deleteUponSuccess" dataType="Boolean" defaultDataExpression="${false}"/>
 
     <!-- Internal -->
     <contextDataDef name="mediaType" dataType="String" defaultDataExpression="${#mediaType(fileToIngest)}"/>
@@ -181,6 +203,7 @@
     <contextDataDef name="createDate" dataType="Date/Time"/>
     <contextDataDef name="localDateTime" dataType="String"/>
     <contextDataDef name="fileName" dataType="String" defaultDataExpression="${#filename(fileToIngest)}"/>
+    <contextDataDef name="fileInRepo" dataType="File"/>
 
     <contextDataDef name="datePath" dataType="String" defaultDataExpression="${#formatDate('yyyy/MM/dd', #newDate())}/"/>
     <contextDataDef name="sourceRepoPath" dataType="String" defaultDataExpression="${#sysconfig('filesystem.root.sources')}/${datePath}"/>

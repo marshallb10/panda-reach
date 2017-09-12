@@ -1,0 +1,36 @@
+<workflow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns="http://levelsbeyond.com/schema/workflow"
+          xmlns:nimbus="http://levelsbeyond.com/schema/workflow/nimbus"
+          xsi:schemaLocation="http://levelsbeyond.com/schema/workflow http://www.levelsbeyond.com/schema/latest/studio.xsd"
+          id="ingestDirectory"
+          name="Ingest Directory"
+          executionLabelExpression="Ingest Directory - ${directory.name}"
+          description=""
+          showInUserInterface="true"
+          subjectDOClassName=""
+          subjectQualifierExpression=""
+          sdkVersion="">
+
+    <initialStepName>ingest files</initialStepName>
+
+    <executeSubflowStep
+            name="ingest files"
+            targetWorkflowId="pandaIngestAsset"
+            subjectChangePath="${#walkDir(directory, null)}"
+            subflowTargetDataDef="fileToIngest"
+            subflowExecutionLimitExpression="5"
+            emptyTargetHandling="allow"
+            continueOnException="true"
+            nextStep="end">
+        <subflowContextDataMapping parentDataDef="deleteUponSuccess" subflowDataDef="deleteUponSuccess"/>
+    </executeSubflowStep>
+
+    <noopStep name="end"/>
+
+    <!-- Input -->
+    <contextDataDef name="directory" dataType="Directory" userInput="true" required="true"/>
+    <contextDataDef name="deleteUponSuccess" dataType="Boolean" userInput="true" defaultDataExpression="${false}"/>
+
+    <!-- Internal -->
+
+</workflow>

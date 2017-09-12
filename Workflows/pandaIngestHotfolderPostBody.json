@@ -1,11 +1,11 @@
 {
-  "name": "photoDrop",
+  "name": "pandaPhotoDrop",
   "enabled": true,
-  "watchFolder": "/Volumes/Passport/PhotoDrop/",
+  "watchFolder": "/reachengine/media/hotfolders/pandaPhotoDrop/",
   "maxConcurrent": 5,
   "deleteOnSuccess": true,
   "processFolders": true,
-  "pollIntervalSeconds": 30,
+  "pollIntervalSeconds": 5,
   "workflowKey": "pandaIngestAsset",
   "fileDataDef": "fileToIngest",
   "requireFileLock": false
