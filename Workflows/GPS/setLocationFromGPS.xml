@@ -77,11 +77,14 @@
 
     <groovyStep
             name="parse google response for location"
-            executionLabelExpression="Set location: '${location}'"
-            resultDataDef="location"
+            executionLabelExpression="Set location: '${locationJson.toString()}'"
+            resultDataDef="locationJson"
             nextStep="save location metadata">
-        <transition condition="${location != null}">
+        <transition condition="${locationJson.location != null}">
             <targetStepName>save location metadata</targetStepName>
+        </transition>
+        <transition condition="${locationJson.address != null}">
+            <targetStepName>save google maps link metadata result</targetStepName>
         </transition>
         <transition condition="true">
             <targetStepName>end</targetStepName>
@@ -91,9 +94,48 @@
             import groovy.json.JsonSlurper
 
             formattedAddress = googleResponseJson.results.get(0).formatted_address.asText()
+            googleMapsID = googleResponseJson.results.get(0).place_id.asText()
 
-            if (formattedAddress.contains('Owens')) return 'Home'
-            if (formattedAddress.contains('Kona')) return 'Kona'
+            locationJson.put('address', formattedAddress)
+            locationJson.put('googleMapsUrl', 'https://www.google.com/maps/search/?api=1&query=' + java.net.URLEncoder.encode(formattedAddress, "UTF-8") + '&query_place_id=' + googleMapsID)
+            locationJson.put('appleMapsUrl', 'http://maps.apple.com/?address' + java.net.URLEncoder.encode(formattedAddress, "UTF-8"))
+
+            if (formattedAddress.contains('Owens')) {
+                locationJson.put('location', 'Home')
+                return locationJson
+            }
+            if (formattedAddress.contains('Durango')) {
+                locationJson.put('location', 'Durango')
+                return locationJson
+            }
+            if (formattedAddress.contains('Kona')) {
+                locationJson.put('location', 'Kona')
+                return locationJson
+            }
+            if (formattedAddress.contains('Redlands')) {
+                locationJson.put('location', 'Redlands')
+                return locationJson
+            }
+            if (formattedAddress.contains('Yucca Valley')) {
+                locationJson.put('location', 'Yucca Valley')
+                return locationJson
+            }
+            if (formattedAddress.contains('6400') && formattedAddress.contains('Westminster')) {
+                locationJson.put('location', 'Costco')
+                return locationJson
+            }
+            if (formattedAddress.equals('10385 Westmoor Dr, Westminster, CO 80021, USA')) {
+                locationJson.put('location', 'Driving Range')
+                return locationJson
+            }
+            if (formattedAddress.equals('10431 Town Center Dr, Broomfield, CO 80021, USA')) {
+                locationJson.put('location', 'East Moon')
+                return locationJson
+            }
+            if (formattedAddress.equals('14694 Orchard Pkwy, Westminster, CO 80023, USA') || formattedAddress.equals('16494 Orchard Pkwy, Westminster, CO 80023, USA')) {
+                locationJson.put('location', 'Pigtails and Crewcuts')
+                return locationJson
+            }
 
             locationPicklistItems = new JsonSlurper().parseText(queryReach('GET', '/reachengine/api/metadata-properties/' + locationMetaId + '/picklist-items?limit=500', null))
 
@@ -107,7 +149,8 @@
                 queryReach('PUT', '/reachengine/api/metadata-properties/' + locationMetaId + '/add-picklist-items', '[{"displayName":"' + formattedAddress +'"}]')
             }
 
-            return formattedAddress
+            locationJson.put('location', formattedAddress)
+            return locationJson
 
             String queryReach (String method, String uri, String body) {
                 connection = new URL(reachUrl + uri).openConnection()
@@ -140,10 +183,31 @@
 
     <saveDataObjectStep
             name="save location metadata"
-            dataObjectExpression="${asset.metadata}"
-            nextStep="reindex">
-        <property name="location">${location}</property>
+            dataObjectExpression="${asset.metadata}">
+        <transition condition="${locationJson.address != null}">
+            <targetStepName>save google maps link metadata result</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>reindex</targetStepName>
+        </transition>
+        <property name="location">${locationJson.location}</property>
     </saveDataObjectStep>
+
+
+    <setAssociationMetadataStep
+            name="save google maps link metadata result"
+            targetExpression="${asset}"
+            propertyNameExpression="googleMaps"
+            valueExpression="{&quot;title&quot;: &quot;${locationJson.address}&quot;, &quot;url&quot;: &quot;${locationJson.googleMapsUrl}&quot;}"
+            nextStep="save apple maps link metadata result"/>
+
+    <setAssociationMetadataStep
+            name="save apple maps link metadata result"
+            targetExpression="${asset}"
+            propertyNameExpression="appleMaps"
+            valueExpression="{&quot;title&quot;: &quot;${locationJson.address}&quot;, &quot;url&quot;: &quot;${locationJson.appleMapsUrl}&quot;}"
+            nextStep="reindex"/>
+
 
     <raiseWorkflowEventStep
             name="reindex"
@@ -168,8 +232,11 @@
     <contextDataDef name="googleResponseString" dataType="String"/>
     <contextDataDef name="googleResponseJson" dataType="JSON"/>
 
-    <contextDataDef name="location" dataType="String"/>
+    <contextDataDef name="locationJson" dataType="JSON" defaultDataExpression="{}"/>
     <contextDataDef name="locationMetaId" dataType="String" defaultDataExpression="${#sysconfig('metadata.location.id')}"/>
     <contextDataDef name="reachUrl" dataType="String" defaultDataExpression="${#sysconfig('reachengine.url')}"/>
     <contextDataDef name="workflowApiKey" dataType="String" defaultDataExpression="${#sysconfig('workflow.api.key')}"/>
+
+    <contextDataDef name="googleMapsMetaValue" dataType="String"/>
+    <contextDataDef name="appleMapsMetaValue" dataType="String"/>
 </workflow>

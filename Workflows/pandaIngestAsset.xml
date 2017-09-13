@@ -11,7 +11,18 @@
           subjectQualifierExpression=""
           sdkVersion="">
 
-    <initialStepName>get exif data</initialStepName>
+    <initialStepName>check if aae sidecar</initialStepName>
+
+    <noopStep
+            name="check if aae sidecar"
+            executionLabelExpression="Extension = ${#extension(fileToIngest)}">
+        <transition condition="${#extension(fileToIngest).toLowerCase() == 'aae' and deleteUponSuccess}">
+            <targetStepName>delete original file</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>end</targetStepName>
+        </transition>
+    </noopStep>
 
     <runCommandStep
             name="get exif data"
