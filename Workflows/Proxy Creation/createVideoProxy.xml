@@ -27,7 +27,7 @@
 			<targetStepName>copy proxy to repo</targetStepName>
 		</transition>
 		<transition condition="true">
-			<targetStepName>fail creating proxy</targetStepName>
+			<targetStepName>copy source to failed proxy location</targetStepName>
 		</transition>
 	</convertVideoStep>
 
@@ -160,8 +160,14 @@
 		<property name="indexTargetRef">${subject}</property>
 	</raiseWorkflowEventStep>
 
+	<copyFileStep
+			name="copy source to failed proxy location"
+			sourceFileExpression="${sourceFile}"
+			targetDirectoryExpression="/Volumes/Passport/FailedProxyGen"
+			nextStep="fail creating proxy"/>
 
-	<failWorkflowStep name="fail creating proxy" reasonExpression="Failed to create proxy"/>
+
+	<noopStep name="fail creating proxy"/>
 	<failWorkflowStep name="fail creating thumb mov" reasonExpression="Failed to create thumb mov"/>
 	<failWorkflowStep name="fail creating thumb jpg" reasonExpression="Failed to create thumb jpg"/>
 

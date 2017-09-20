@@ -57,6 +57,7 @@
 
     <submitHttpStep
             name="get location from google"
+            executionLabelExpression="Get location from google.. URL = https://maps.googleapis.com/maps/api/geocode/json?latlng=${gpsCoordsString}&amp;key=${#sysconfig('google.api.key')}"
             requestMethodExpression="GET"
             urlExpression="https://maps.googleapis.com/maps/api/geocode/json?latlng=${gpsCoordsString}&amp;key=${#sysconfig('google.api.key')}"
             responseCodeDataDef="googleResponseCode"
@@ -72,8 +73,14 @@
     <setContextData
             name="set google response json"
             targetDataDef="googleResponseJson"
-            valueExpression="${googleResponseString}"
-            nextStep="parse google response for location"/>
+            valueExpression="${googleResponseString}">
+        <transition condition="${googleResponseJson != null and googleResponseJson.results.size() > 0 and googleResponseJson.status != 'ZERO_RESULTS'}">
+            <targetStepName>parse google response for location</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>end</targetStepName>
+        </transition>
+    </setContextData>
 
     <groovyStep
             name="parse google response for location"
@@ -100,8 +107,123 @@
             locationJson.put('googleMapsUrl', 'https://www.google.com/maps/search/?api=1&query=' + java.net.URLEncoder.encode(formattedAddress, "UTF-8") + '&query_place_id=' + googleMapsID)
             locationJson.put('appleMapsUrl', 'http://maps.apple.com/?address' + java.net.URLEncoder.encode(formattedAddress, "UTF-8"))
 
-            if (formattedAddress.contains('Owens')) {
+            if (formattedAddress.contains('Owens') ||
+                    formattedAddress.equals('10901-10931 W 100th Way, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10101-10177 Countryside Dr, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10200-10298 W 101st Pl, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10920 W 100th Way, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10931 W 100th Way, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10092 Oak Cir, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('9907 W 99th Pl, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10541 W 101st Ave, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('9869 Kline St, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('Kipling Way, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('W 97th Dr, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10900-10904 W 102nd Cir, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('9950 W 100th Ave, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('9837-9847 W 99th Pl, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('9035 W 96th Dr, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10011 Lewis Ct, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10040-10060 W 101st Dr, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10045-10089 Countryside Dr, Westminster, CO 80021, USA')) {
                 locationJson.put('location', 'Home')
+                return locationJson
+            }
+
+            if (formattedAddress.equals('8430 Church Ranch Blvd, Broomfield, CO 80021, USA') ||
+                    formattedAddress.equals('10001-10045 Dover St, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('8700 Church Ranch Blvd, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('8510 Church Ranch Blvd, Broomfield, CO 80021, USA') ||
+                    formattedAddress.equals('8430 Church Ranch Blvd, Broomfield, CO 80021, USA') ||
+                    formattedAddress.equals('8471-8563 Church Ranch Blvd, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('8900-8998 W 100th Ave, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('8300-8766 W 100th Ave, Westminster, CO 80021, USA')) {
+                locationJson.put('location', 'Primrose')
+                return locationJson
+            }
+
+            // Restaurants
+            if (formattedAddress.equals('7475 W 88th Ave, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('14697 Delaware St, Westminster, CO 80023, USA') ||
+                    formattedAddress.equals('7347 W 55th Ave, Arvada, CO 80002, USA') ||
+                    formattedAddress.equals('8354 Quay Dr, Arvada, CO 80003, USA') ||
+                    formattedAddress.equals('7254 W 84th Way, Arvada, CO 80003, USA') ||
+                    formattedAddress.equals('7767 W 87th Dr, Arvada, CO 80005, USA') ||
+                    formattedAddress.equals('7525-7563 W 88th Ave, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('7563 W 88th Ave, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10431 Town Center Dr, Broomfield, CO 80021, USA') ||
+                    formattedAddress.equals('10414-10426 Town Center Dr, Westminster, CO 80021, USA, USA') ||
+                    formattedAddress.equals('10415-10429 Town Center Dr, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10404-10412 Town Center Dr, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10414-10426 Town Center Dr, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10300-10318 Reed St, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10434-10436 Town Center Dr, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10435-10443 Town Center Dr, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10436 Town Center Dr, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('1001 W 120th Ave, Westminster, CO 80234, USA') ||
+                    formattedAddress.equals('8770 W 88th Ave, Arvada, CO 80003, USA') ||
+                    formattedAddress.equals('9201-9299 W 99th Ave, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('8983 Wadsworth Pkwy, Westminster, CO 80005, USA') ||
+                    formattedAddress.equals('7640-7658 W 90th Ave, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('7660-7678 W 90th Ave, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('7175 W 88th Ave, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('7275 W 88th Ave, Westminster, CO 80021, USA')) {
+                locationJson.put('location', 'Restaurant')
+                return locationJson
+            }
+            if (formattedAddress.equals('14694 Orchard Pkwy, Westminster, CO 80023, USA') ||
+                    formattedAddress.equals('16494 Orchard Pkwy, Westminster, CO 80023, USA') ||
+                    formattedAddress.equals('I-25, Westminster, CO 80023, USA')) {
+                locationJson.put('location', 'Pigtails and Crewcuts')
+                return locationJson
+            }
+
+            // Random Parks
+            if (formattedAddress.equals('Big Dry Creek Trail, Englewood, CO 80110, USA') ||
+                    formattedAddress.equals('10441 Newcombe St, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('10481 Newcombe St, Westminster, CO 80021, USA')) {
+                locationJson.put('location', 'Park')
+                return locationJson
+            }
+
+            // Random Doctor
+            if (formattedAddress.equals('9017-9023 Wadsworth Pkwy, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('403 Summit Blvd, Broomfield, CO 80021, USA') ||
+                    formattedAddress.equals('9035-9039 Wadsworth Pkwy, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('9027 Wadsworth Pkwy, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('9035 Wadsworth Pkwy, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('9905 Hoyt Ln, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('9404 W 99th Way, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('400 Indiana St, Lakewood, CO 80401, USA') ||
+                    formattedAddress.equals('9041-9057 Wadsworth Pkwy, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('9033-9035 Wadsworth Pkwy, Westminster, CO 80021, USA') ||
+                    formattedAddress.equals('9029-9031 Wadsworth Pkwy, Westminster, CO 80021, USA')) {
+                locationJson.put('location', 'Doctor')
+                return locationJson
+            }
+
+            if (formattedAddress.contains('Denver')) {
+                locationJson.put('location', 'Denver')
+                return locationJson
+            }
+            if (formattedAddress.contains('Boulder')) {
+                locationJson.put('location', 'Boulder')
+                return locationJson
+            }
+            if (formattedAddress.contains('Louisville')) {
+                locationJson.put('location', 'Louisville')
+                return locationJson
+            }
+            if (formattedAddress.contains('Broomfield')) {
+                locationJson.put('location', 'Broomfield')
+                return locationJson
+            }
+            if (formattedAddress.contains('Erie')) {
+                locationJson.put('location', 'Erie')
+                return locationJson
+            }
+            if (formattedAddress.contains('Golden') || formattedAddress.equals('18300 Alameda Pkwy, Morrison, CO 80465, USA')) {
+                locationJson.put('location', 'Golden')
                 return locationJson
             }
             if (formattedAddress.contains('Durango')) {
@@ -116,26 +238,27 @@
                 locationJson.put('location', 'Redlands')
                 return locationJson
             }
+            if (formattedAddress.contains('Rancho Santa Margarita')) {
+                locationJson.put('location', 'Rancho Santa Margarita')
+                return locationJson
+            }
             if (formattedAddress.contains('Yucca Valley')) {
                 locationJson.put('location', 'Yucca Valley')
+                return locationJson
+            }
+            if (formattedAddress.contains('Las Vegas')) {
+                locationJson.put('location', 'Las Vegas')
+                return locationJson
+            }
+            if (formattedAddress.contains('Phoenix') || (formattedAddress.contains('Surprise') && formattedAddress.contains('AZ'))) {
+                locationJson.put('location', 'Phoenix')
                 return locationJson
             }
             if (formattedAddress.contains('6400') && formattedAddress.contains('Westminster')) {
                 locationJson.put('location', 'Costco')
                 return locationJson
             }
-            if (formattedAddress.equals('10385 Westmoor Dr, Westminster, CO 80021, USA')) {
-                locationJson.put('location', 'Driving Range')
-                return locationJson
-            }
-            if (formattedAddress.equals('10431 Town Center Dr, Broomfield, CO 80021, USA')) {
-                locationJson.put('location', 'East Moon')
-                return locationJson
-            }
-            if (formattedAddress.equals('14694 Orchard Pkwy, Westminster, CO 80023, USA') || formattedAddress.equals('16494 Orchard Pkwy, Westminster, CO 80023, USA')) {
-                locationJson.put('location', 'Pigtails and Crewcuts')
-                return locationJson
-            }
+
 
             locationPicklistItems = new JsonSlurper().parseText(queryReach('GET', '/reachengine/api/metadata-properties/' + locationMetaId + '/picklist-items?limit=500', null))
 

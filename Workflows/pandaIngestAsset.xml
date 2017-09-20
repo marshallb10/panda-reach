@@ -20,7 +20,7 @@
             <targetStepName>delete original file</targetStepName>
         </transition>
         <transition condition="true">
-            <targetStepName>end</targetStepName>
+            <targetStepName>get exif data</targetStepName>
         </transition>
     </noopStep>
 
@@ -80,7 +80,7 @@
             name="copy to duplicates"
             sourceFileExpression="${fileToIngest}"
             targetDirectoryExpression="${#sysconfig('filesystem.root.duplicates')}">
-        <transition condition="${deleteUponSuccess and fileInRepo != null}">
+        <transition condition="${deleteUponSuccess}">
             <targetStepName>delete original file</targetStepName>
         </transition>
         <transition condition="true">

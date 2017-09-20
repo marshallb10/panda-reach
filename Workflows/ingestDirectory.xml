@@ -11,20 +11,89 @@
           subjectQualifierExpression=""
           sdkVersion="">
 
-    <initialStepName>ingest files</initialStepName>
+    <initialStepName>output start total</initialStepName>
+
+    <noopStep
+            name="output start total"
+            executionLabelExpression="Attempting ingest of ${startTotal} files.">
+        <transition condition="${startTotal > 0}">
+            <targetStepName>set record count</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>no files found</targetStepName>
+        </transition>
+    </noopStep>
+
+    <setContextData
+            name="set record count"
+            targetDataDef="recordCount"
+            valueExpression="${allFiles.size()}"
+            executionLabelExpression="recordCount is ${recordCount}">
+        <transition condition="${ recordCount != 0 }">
+            <targetStepName>set end index</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>end</targetStepName>
+        </transition>
+    </setContextData>
+
+    <setContextData
+            name="set end index"
+            executionLabelExpression="Set end index: ${endIndex}"
+            devStep="true"
+            targetDataDef="endIndex"
+            valueExpression="${ recordCount > limit ? limit : recordCount }"
+            nextStep="set range"/>
+
+    <setContextData
+            name="set range"
+            devStep="true"
+            targetDataDef="workingChunk"
+            valueExpression="${allFiles.subList(0, endIndex)}"
+            nextStep="remove sublist from main list"/>
+
+    <groovyStep
+            name="remove sublist from main list"
+            devStep="true"
+            resultDataDef="allFiles"
+            nextStep="process files">
+        <script>
+            <![CDATA[
+				import org.slf4j.Logger;
+				import org.slf4j.LoggerFactory;
+
+				Logger log = LoggerFactory.getLogger("com.levelsbeyond.plugin.workflow");
+				def success = allFiles.removeAll(workingChunk);
+
+				workingChunk.each(){
+					log.debug("**** removing ${it} from list");
+				}
+
+				if(success){
+					allFiles.each(){
+						log.debug("**** ${it} remains in the list");
+					}
+			 		return allFiles;
+				} else {
+					throw new RuntimeException("failed to remove the sublist");
+			 		return null;
+				}
+			]]>
+
+        </script>
+    </groovyStep>
 
     <executeSubflowStep
-            name="ingest files"
+            name="process files"
             targetWorkflowId="pandaIngestAsset"
-            subjectChangePath="${#walkDir(directory, null)}"
             subflowTargetDataDef="fileToIngest"
-            subflowExecutionLimitExpression="5"
-            emptyTargetHandling="allow"
-            continueOnException="true"
-            nextStep="end">
+            subjectChangePath="${workingChunk}"
+            nextStep="set record count">
         <subflowContextDataMapping parentDataDef="deleteUponSuccess" subflowDataDef="deleteUponSuccess"/>
     </executeSubflowStep>
 
+
+    <noopStep name="no files found"/>
     <noopStep name="end"/>
 
     <!-- Input -->
@@ -32,5 +101,10 @@
     <contextDataDef name="deleteUponSuccess" dataType="Boolean" userInput="true" defaultDataExpression="${false}"/>
 
     <!-- Internal -->
-
+    <contextDataDef name="allFiles" dataType="File" multiple="true" defaultDataExpression="${#walkDir(directory, null)}"/>
+    <contextDataDef name="workingChunk" dataType="File" multiple="true"/>
+    <contextDataDef name="startTotal" dataType="Integer" defaultDataExpression="${allFiles.size()}"/>
+    <contextDataDef name="recordCount" dataType="Integer"/>
+    <contextDataDef name="endIndex" dataType="Integer"/>
+    <contextDataDef name="limit" dataType="Integer" defaultDataExpression="4"/>
 </workflow>

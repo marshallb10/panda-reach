@@ -1,0 +1,120 @@
+<workflow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns="http://levelsbeyond.com/schema/workflow"
+          xmlns:nimbus="http://levelsbeyond.com/schema/workflow/nimbus"
+          xsi:schemaLocation="http://levelsbeyond.com/schema/workflow http://www.levelsbeyond.com/schema/latest/studio.xsd"
+          id="updateMetadata"
+          name="Update Metadata"
+          executionLabelExpression="Update Metadata - ${subject.name}"
+          description=""
+          showInUserInterface="true"
+          subjectDOClassName="AssetMaster"
+          subjectQualifierExpression=""
+          sdkVersion="">
+
+    <initialStepName>create json</initialStepName>
+
+    <groovyStep
+            name="create json"
+            resultDataDef="locationsJson"
+            nextStep="end">
+        <script>
+            <![CDATA[
+            locationsJson.putArray('home')
+            locationsJson.home.add('10136 Owens Dr, Westminster, CO 80021, USA')
+            locationsJson.home.add('10136-10166 Owens Dr, Westminster, CO 80021, USA')
+            locationsJson.home.add('10176 Owens Dr, Westminster, CO 80021, USA')
+            locationsJson.home.add('10166 Owens Dr, Westminster, CO 80021, USA')
+            locationsJson.home.add('10147 Owens Dr, Westminster, CO 80021, USA')
+            locationsJson.home.add('10127 Owens Dr, Westminster, CO 80021, USA')
+            locationsJson.home.add('10126 Owens Dr, Westminster, CO 80021, USA')
+            locationsJson.home.add('10125 Owens Dr, Westminster, CO 80021, USA')
+            locationsJson.home.add('10096 Owens Dr, Westminster, CO 80021, USA')
+            locationsJson.home.add('10901-10931 W 100th Way, Westminster, CO 80021, USA')
+            locationsJson.home.add('10101-10177 Countryside Dr, Westminster, CO 80021, USA')
+            locationsJson.home.add('10200-10298 W 101st Pl, Westminster, CO 80021, USA')
+            locationsJson.home.add('10920 W 100th Way, Westminster, CO 80021, USA')
+            locationsJson.home.add('10931 W 100th Way, Westminster, CO 80021, USA')
+            locationsJson.home.add('10045-10089 Countryside Dr, Westminster, CO 80021, USA')
+
+            locationsJson.putArray('costco')
+            locationsJson.costco.add('6400 6400 W, Westminster, CO 80031, USA')
+
+            locationsJson.putArray('primrose')
+            locationsJson.primrose.add('8430 Church Ranch Blvd, Broomfield, CO 80021, USA')
+            locationsJson.primrose.add('10001-10045 Dover St, Westminster, CO 80021, USA')
+            locationsJson.primrose.add('8700 Church Ranch Blvd, Westminster, CO 80021, USA')
+            locationsJson.primrose.add('8510 Church Ranch Blvd, Broomfield, CO 80021, USA')
+            locationsJson.primrose.add('8300-8766 W 100th Ave, Westminster, CO 80021, USA')
+
+            locationsJson.putArray('restaurant')
+            locationsJson.restaurant.add('14697 Delaware St, Westminster, CO 80023, USA')
+            locationsJson.restaurant.add('7347 W 55th Ave, Arvada, CO 80002, USA')
+            locationsJson.restaurant.add('1001 W 120th Ave, Westminster, CO 80234, USA')
+            locationsJson.restaurant.add('10431 Town Center Dr, Broomfield, CO 80021, USA')
+            locationsJson.restaurant.add('10414-10426 Town Center Dr, Westminster, CO 80021, USA, USA')
+            locationsJson.restaurant.add('10415-10429 Town Center Dr, Westminster, CO 80021, USA')
+            locationsJson.restaurant.add('10404-10412 Town Center Dr, Westminster, CO 80021, USA')
+            locationsJson.restaurant.add('7475 W 88th Ave, Westminster, CO 80021, USA')
+            locationsJson.restaurant.add('7525-7563 W 88th Ave, Westminster, CO 80021, USA')
+            locationsJson.restaurant.add('7563 W 88th Ave, Westminster, CO 80021, USA')
+            locationsJson.restaurant.add('7175 W 88th Ave, Westminster, CO 80021, USA')
+            locationsJson.restaurant.add('7275 W 88th Ave, Westminster, CO 80021, USA')
+
+            locationsJson.putArray('park')
+            locationsJson.park.add('Big Dry Creek Trail, Englewood, CO 80110, USA')
+            locationsJson.park.add('10441 Newcombe St, Westminster, CO 80021, USA')
+            locationsJson.park.add('10481 Newcombe St, Westminster, CO 80021, USA')
+
+            locationsJson.putArray('doctor')
+            locationsJson.doctor.add('9017-9023 Wadsworth Pkwy, Westminster, CO 80021, USA')
+            locationsJson.doctor.add('403 Summit Blvd, Broomfield, CO 80021, USA')
+            locationsJson.doctor.add('9029-9031 Wadsworth Pkwy, Westminster, CO 80021, USA')
+            locationsJson.doctor.add('9035-9039 Wadsworth Pkwy, Westminster, CO 80021, USA')
+
+            locationsJson.putArray('haircut')
+            locationsJson.haircut.add('14694 Orchard Pkwy, Westminster, CO 80023, USA')
+            locationsJson.haircut.add('16494 Orchard Pkwy, Westminster, CO 80023, USA')
+
+            locationsJson.putArray('zoo')
+            locationsJson.haircut.add('2300 Steele St, Denver, CO 80205, USA')
+
+
+
+            if (formattedAddress.equals('10385 Westmoor Dr, Westminster, CO 80021, USA')) {
+                locationJson.put('location', 'Driving Range')
+                return locationJson
+            }
+
+            // Random Store
+            if (formattedAddress.equals('7347 W 55th Ave, Arvada, CO 80002, USA')) {
+                locationJson.put('location', 'Store')
+                return locationJson
+            }
+            ]]>
+        </script>
+    </groovyStep>
+
+    <noopStep name="end"/>
+
+    <!-- Input -->
+    <contextDataDef name="location" dataType="String" userInput="true">
+        <picklist>
+            <metadataProperty>location</metadataProperty>
+        </picklist>
+    </contextDataDef>
+    <contextDataDef name="people" dataType="String" userInput="true" multiple="true">
+        <picklist>
+            <metadataProperty>people</metadataProperty>
+        </picklist>
+    </contextDataDef>
+    <contextDataDef name="tags" dataType="String" userInput="true" multiple="true">
+        <picklist>
+            <metadataProperty>tags</metadataProperty>
+        </picklist>
+    </contextDataDef>
+    <contextDataDef name="notes" dataType="String" userInput="true">
+
+    <!-- Internal -->
+    <contextDataDef name="locationsJson" dataType="JSON" defaultDataExpression="{}"/>
+    <contextDataDef name="locationsJsonFilepath" dataType="String" defaultDataExpression="/reachengine/data/locations.json"/>
+</workflow>
