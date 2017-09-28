@@ -27,7 +27,7 @@
 			<targetStepName>copy proxy to repo</targetStepName>
 		</transition>
 		<transition condition="true">
-			<targetStepName>copy source to failed proxy location</targetStepName>
+			<targetStepName>set failure state proxy</targetStepName>
 		</transition>
 	</convertVideoStep>
 
@@ -48,13 +48,14 @@
 			name="save proxy"
 			executionLabelExpression="Save transcode result ${proxyFile.absolutePath} to repository"
 			contentExpression="${proxyFile}"
-			contentUseExpression="Proxy"
+			contentUseExpression="|PROXY|"
 			versionAssetExpression="${false}"
 			assetExpression="${subject}"
 			nextStep="delete proxy transcode result"/>
 
 	<deleteFileStep
 			name="delete proxy transcode result"
+			executionLabelExpression="Deleting trancode result.. new Proxy Path = ${(#proxyContent(subject.currentVersion)).file.absolutePath}"
 			sourceFilesExpression="${proxyResult}"
 			nextStep="create thumb mov"/>
 	<!-- END Proxy -->
@@ -74,7 +75,7 @@
 			<targetStepName>copy thumb mov to repo</targetStepName>
 		</transition>
 		<transition condition="true">
-			<targetStepName>fail creating thumb mov</targetStepName>
+			<targetStepName>set failure state thumb mov</targetStepName>
 		</transition>
 	</convertVideoStep>
 
@@ -120,7 +121,7 @@
 			<targetStepName>copy thumb jpg to repo</targetStepName>
 		</transition>
 		<transition condition="true">
-			<targetStepName>fail creating thumb jpg</targetStepName>
+			<targetStepName>set failure state thumbnail</targetStepName>
 		</transition>
 	</convertImageStep>
 
@@ -152,6 +153,28 @@
 			nextStep="reindex"/>
 	<!-- END Thumb Jpg -->
 
+	<saveDataObjectStep
+			name="set failure state proxy"
+			dataObjectExpression="${subject.metadata}"
+			nextStep="reindex">
+		<property name="errorState">Missing Proxy</property>
+	</saveDataObjectStep>
+
+	<saveDataObjectStep
+			name="set failure state thumb mov"
+			dataObjectExpression="${subject.metadata}"
+			nextStep="reindex">
+		<property name="errorState">Missing Thumb Mov</property>
+	</saveDataObjectStep>
+
+	<saveDataObjectStep
+			name="set failure state thumbnail"
+			dataObjectExpression="${subject.metadata}"
+			nextStep="reindex">
+		<property name="errorState">Missing Thumbnail</property>
+	</saveDataObjectStep>
+
+
 	<raiseWorkflowEventStep
 			name="reindex"
 			eventTypeExpression="ensureIndexed"
@@ -160,16 +183,6 @@
 		<property name="indexTargetRef">${subject}</property>
 	</raiseWorkflowEventStep>
 
-	<copyFileStep
-			name="copy source to failed proxy location"
-			sourceFileExpression="${sourceFile}"
-			targetDirectoryExpression="/Volumes/Passport/FailedProxyGen"
-			nextStep="fail creating proxy"/>
-
-
-	<noopStep name="fail creating proxy"/>
-	<failWorkflowStep name="fail creating thumb mov" reasonExpression="Failed to create thumb mov"/>
-	<failWorkflowStep name="fail creating thumb jpg" reasonExpression="Failed to create thumb jpg"/>
 
 	<noopStep name="end"/>
 

@@ -1,0 +1,71 @@
+<workflow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns="http://levelsbeyond.com/schema/workflow"
+          xmlns:nimbus="http://levelsbeyond.com/schema/workflow/nimbus"
+          xsi:schemaLocation="http://levelsbeyond.com/schema/workflow http://www.levelsbeyond.com/schema/latest/studio.xsd"
+          id="fixAddresses"
+          name="Fix Addresses"
+          executionLabelExpression="Fix Addresses"
+          description=""
+          showInUserInterface="true"
+          subjectDOClassName=""
+          subjectQualifierExpression=""
+          sdkVersion="">
+
+    <initialStepName>get assets</initialStepName>
+
+    <queryStep name="get assets" executionLabelExpression="Updating ${assets.size()} assets." targetDataObjectClass="AssetMaster" resultDataDef="assets" nextStep="set asset"/>
+
+    <setContextData name="set asset" targetDataDef="asset" valueExpression="${assets[counter]}" devStep="true">
+        <transition condition="${asset.metadata.appleMaps != null}">
+            <targetStepName>set apple maps string</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>update counter</targetStepName>
+        </transition>
+    </setContextData>
+
+    <setContextData name="set apple maps string" targetDataDef="appleMapsString" valueExpression="${asset.metadata.appleMaps}" nextStep="get address" devStep="true"/>
+
+    <groovyStep name="get address" resultDataDef="address" nextStep="save address" devStep="true">
+        <script>
+            <![CDATA[
+            parts = appleMapsString.split('=')
+            return parts[0].substring(1)
+            ]]>
+        </script>
+    </groovyStep>
+
+    <saveDataObjectStep name="save address" dataObjectExpression="${asset.metadata}" nextStep="reindex asset" devStep="true">
+        <property name="address">address</property>
+    </saveDataObjectStep>
+
+    <raiseWorkflowEventStep
+            name="reindex asset"
+            devStep="true"
+            eventTypeExpression="ensureIndexed"
+            executionLabelExpression="Ensure Asset Indexed"
+            nextStep="update counter">
+        <property name="indexTargetRef">${asset}</property>
+    </raiseWorkflowEventStep>
+
+    <setContextData name="update counter" targetDataDef="counter" valueExpression="${counter + 1}" devStep="true">
+        <transition condition="${counter &lt; assets.size()}">
+            <targetStepName>set asset</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>end</targetStepName>
+        </transition>
+    </setContextData>
+
+    <noopStep name="end"/>
+
+    <!-- Input -->
+
+
+    <!-- Internal -->
+    <contextDataDef name="assets" dataType="Data Object" multiple="true"/>
+    <contextDataDef name="asset" dataType="Data Object"/>
+    <contextDataDef name="appleMapsString" dataType="String"/>
+    <contextDataDef name="address" dataType="String"/>
+    <contextDataDef name="counter" dataType="Integer" defaultDataExpression="0"/>
+</workflow>

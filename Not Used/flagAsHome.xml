@@ -1,0 +1,204 @@
+<workflow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns="http://levelsbeyond.com/schema/workflow"
+          xmlns:nimbus="http://levelsbeyond.com/schema/workflow/nimbus"
+          xsi:schemaLocation="http://levelsbeyond.com/schema/workflow http://www.levelsbeyond.com/schema/latest/studio.xsd"
+          id="flagAsHome"
+          name="Flag As Home"
+          executionLabelExpression="Flag As Home - ${subject.name}"
+          description=""
+          showInUserInterface="true"
+          subjectDOClassName="AssetMaster"
+          subjectQualifierExpression=""
+          sdkVersion="">
+
+    <initialStepName>check if exists in location list</initialStepName>
+
+    <noopStep name="output location value" executionLabelExpression="Location = ${subject.metadata.location} and label = ${#picklistLabel('location', subject.metadata.location)}" nextStep="end"/>
+    
+    <groovyStep
+            name="check if exists in location list"
+            executionLabelExpression="Location contains '${address}'? ${locationExists}"
+            resultDataDef="locationExists">
+        <transition condition="${locationExists}">
+            <targetStepName>delete picklist item</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>check if exists in home list</targetStepName>
+        </transition>
+        <script>
+            <![CDATA[
+            import groovy.json.JsonSlurper
+
+            locationPicklistItems = new JsonSlurper().parseText(queryReach('GET', '/reachengine/api/metadata-properties/' + locationMetaId + '/picklist-items?limit=500', null))
+
+            if (locationPicklistItems.find { item ->
+                if (item.displayName == address) {
+                    println 'Got a match!!'
+                    return true
+                }
+            }) return true
+
+            return false
+
+            String queryReach (String method, String uri, String body) {
+                connection = new URL(reachUrl + uri).openConnection()
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.setRequestProperty("apiKey", workflowApiKey)
+                connection.setRequestProperty("api-version", "2.0")
+
+                if ((method == 'POST' || method == 'PUT') && body != null) {
+                    connection.setRequestMethod(method)
+                    connection.setDoOutput(true)
+                    connection.getOutputStream().write(body.getBytes("UTF-8"))
+                }
+
+                responseCode = connection.responseCode
+                if (responseCode.equals(200)) {
+                    return connection.inputStream.text
+                } else {
+                    println('---- Query Reach FAILURE ----')
+                    println('Response Code = ' + responseCode)
+                    println('Message = ' + connection.responseMessage)
+                    println('Method = ' + method)
+                    println('URI = ' + uri)
+                    if (body != null) println('Body = ' + body)
+                    return null
+                }
+            }
+            ]]>
+        </script>
+    </groovyStep>
+
+    <submitHttpStep
+            name="delete picklist item"
+            executionLabelExpression="Deleting location picklist item: ${address}. Response code = ${deleteResponseCode}"
+            urlExpression="${reachUrl}/reachengine/api/metadata-properties/${locationMetaId}/delete-picklist-items"
+            requestMethodExpression="PUT"
+            responseCodeDataDef="deleteResponseCode"
+            nextStep="check if exists in home list">
+        <requestPayloadItem name="body">[${deleteBody.toString()}]</requestPayloadItem>
+        <requestHeader name="Content-Type">application/json</requestHeader>
+        <requestHeader name="apiKey">${#sysconfig('workflow.api.key')}</requestHeader>
+        <requestHeader name="api-version">2.0</requestHeader>
+    </submitHttpStep>
+
+    <groovyStep
+            name="check if exists in home list"
+            executionLabelExpression="Home contains '${#picklistLabel('location', subject.metadata.location)}'? ${homeExists}"
+            resultDataDef="homeExists">
+        <transition condition="${!homeExists}">
+            <targetStepName>add address to home addresses</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>set location to home</targetStepName>
+        </transition>
+        <script>
+            <![CDATA[
+            import groovy.json.JsonSlurper
+
+            addressesHomePicklistItems = new JsonSlurper().parseText(queryReach('GET', '/reachengine/api/metadata-properties/' + addressesHomeMetaId + '/picklist-items?limit=500', null))
+
+            if (addressesHomePicklistItems.find { item ->
+                if (item.displayName == address) {
+                    println 'Got a match!!'
+                    return true
+                }
+            }) return true
+
+            return false
+
+            String queryReach (String method, String uri, String body) {
+                connection = new URL(reachUrl + uri).openConnection()
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.setRequestProperty("apiKey", workflowApiKey)
+                connection.setRequestProperty("api-version", "2.0")
+
+                if ((method == 'POST' || method == 'PUT') && body != null) {
+                    connection.setRequestMethod(method)
+                    connection.setDoOutput(true)
+                    connection.getOutputStream().write(body.getBytes("UTF-8"))
+                }
+
+                responseCode = connection.responseCode
+                if (responseCode.equals(200)) {
+                    return connection.inputStream.text
+                } else {
+                    println('---- Query Reach FAILURE ----')
+                    println('Response Code = ' + responseCode)
+                    println('Message = ' + connection.responseMessage)
+                    println('Method = ' + method)
+                    println('URI = ' + uri)
+                    if (body != null) println('Body = ' + body)
+                    return null
+                }
+            }
+            ]]>
+        </script>
+    </groovyStep>
+
+    <submitHttpStep
+            name="add address to home addresses"
+            executionLabelExpression="Adding to Addresses Home: ${#picklistLabel('location', subject.metadata.location)}. Response code = ${addResponseCode}"
+            urlExpression="${reachUrl}/reachengine/api/metadata-properties/${addressesHomeMetaId}/add-picklist-items"
+            requestMethodExpression="PUT"
+            responseCodeDataDef="addResponseCode"
+            nextStep="set location to home">
+        <requestPayloadItem name="body">[${addBody.toString()}]</requestPayloadItem>
+        <requestHeader name="Content-Type">application/json</requestHeader>
+        <requestHeader name="apiKey">${#sysconfig('workflow.api.key')}</requestHeader>
+        <requestHeader name="api-version">2.0</requestHeader>
+    </submitHttpStep>
+
+    <saveDataObjectStep
+            name="set location to home"
+            dataObjectExpression="${asset.metadata}"
+            nextStep="reindex">
+        <property name="location">Home</property>
+    </saveDataObjectStep>
+
+    <raiseWorkflowEventStep
+            name="reindex"
+            eventTypeExpression="ensureIndexed"
+            executionLabelExpression="Ensure Asset Indexed"
+            nextStep="end">
+        <property name="indexTargetRef">${asset}</property>
+    </raiseWorkflowEventStep>
+
+    <noopStep name="end"/>
+
+    <!-- Input -->
+    <contextDataDef name="asset" dataType="Data Object" defaultDataExpression="${subject}"/>
+
+    <!-- Internal -->
+    <contextDataDef name="address" dataType="String" defaultDataExpression="${#picklistLabel('location', subject.metadata.location)}"/>
+
+    <contextDataDef name="locationMetaId" dataType="String" defaultDataExpression="${#sysconfig('metadata.location.id')}"/>
+    <contextDataDef name="addressesHomeMetaId" dataType="String" defaultDataExpression="${#sysconfig('metadata.addressesHome.id')}"/>
+
+    <contextDataDef name="locationExists" dataType="Boolean"/>
+    <contextDataDef name="homeExists" dataType="Boolean"/>
+
+    <contextDataDef name="reachUrl" dataType="String" defaultDataExpression="${#sysconfig('reachengine.url')}"/>
+    <contextDataDef name="workflowApiKey" dataType="String" defaultDataExpression="${#sysconfig('workflow.api.key')}"/>
+    <contextDataDef name="deleteBody" dataType="JSON">
+        <defaultDataExpression>
+            <![CDATA[
+                {
+                    id: "${asset.metadata.location}",
+                    displayName: "${#picklistLabel('location', asset.metadata.location)}"
+                }
+            ]]>
+        </defaultDataExpression>
+    </contextDataDef>
+    <contextDataDef name="addBody" dataType="JSON">
+        <defaultDataExpression>
+            <![CDATA[
+                {
+                    displayName: "${#picklistLabel('location', asset.metadata.location)}"
+                }
+            ]]>
+        </defaultDataExpression>
+    </contextDataDef>
+    <contextDataDef name="deleteResponseCode" dataType="Integer"/>
+    <contextDataDef name="addResponseCode" dataType="Integer"/>
+</workflow>

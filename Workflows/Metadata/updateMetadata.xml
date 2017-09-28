@@ -1,0 +1,250 @@
+<workflow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns="http://levelsbeyond.com/schema/workflow"
+          xmlns:nimbus="http://levelsbeyond.com/schema/workflow/nimbus"
+          xsi:schemaLocation="http://levelsbeyond.com/schema/workflow http://www.levelsbeyond.com/schema/latest/studio.xsd"
+          id="updateMetadata"
+          name="Update Metadata"
+          executionLabelExpression="Update Metadata - ${subject.name}"
+          description=""
+          showInUserInterface="true"
+          subjectDOClassName="AssetMaster"
+          subjectQualifierExpression=""
+          sdkVersion="">
+
+    <initialStepName>validate input</initialStepName>
+
+    <noopStep name="validate input">
+        <transition condition="${locationType == null and locationName == null and people == null and tags == null and notes == null}">
+            <targetStepName>notify nothing to do</targetStepName>
+        </transition>
+        <transition condition="${locationType != null or locationName != null}">
+            <targetStepName>look for assets with same address</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>set json metadata</targetStepName>
+        </transition>
+    </noopStep>
+
+    <queryStep
+            name="look for assets with same address"
+            targetDataObjectClass="AssetMaster"
+            resultDataDef="assetsSameAddress"
+            fetchLimitExpression="${limit}"
+            fetchOffsetExpression="${offset}">
+        <transition condition="${assetsSameAddress != null and assetsSameAddress.size() > 0 and locationType != null}">
+            <targetStepName>update location type on other assets</targetStepName>
+        </transition>
+        <transition condition="${assetsSameAddress != null and assetsSameAddress.size() > 0 and locationName != null}">
+            <targetStepName>update location name on other assets</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>set json metadata</targetStepName>
+        </transition>
+        <criteria>
+            <![CDATA[
+			<criteria>
+				<and>
+					<condition property="metadata.address" op="eq">
+						<test value="${asset.metadata.address}"/>
+					</condition>
+				</and>
+			</criteria>
+			]]>
+        </criteria>
+        <sortOrder sortPropertyExpression="id"
+                   sortDirectionExpression="ASC"/>
+    </queryStep>
+
+    <saveDataObjectStep
+            name="update location type on other assets"
+            dataObjectExpression="${assetsSameAddress.![metadata]}">
+        <transition condition="${assetsSameAddress != null and assetsSameAddress.size() > 0 and locationName != null}">
+            <targetStepName>update location name on other assets</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>update fetch offset</targetStepName>
+        </transition>
+        <property name="locationType">${locationType}</property>
+    </saveDataObjectStep>
+
+    <saveDataObjectStep
+            name="update location name on other assets"
+            dataObjectExpression="${assetsSameAddress.![metadata]}"
+            nextStep="update fetch offset">
+        <property name="locationName">${locationName}</property>
+    </saveDataObjectStep>
+
+    <setContextData
+            name="update fetch offset"
+            targetDataDef="offset"
+            valueExpression="${offset + limit}"
+            nextStep="look for assets with same address"/>
+
+
+    <groovyStep
+            name="set json metadata"
+            executionLabelExpression="Set json metadata: ${jsonMetadata.toString()}"
+            resultDataDef="jsonMetadata"
+            nextStep="save asset metadata">
+        <script>
+            <![CDATA[
+            if (locationType) jsonMetadata.put('locationType', locationType)
+            if (locationName) jsonMetadata.put('locationName', locationName)
+            if (people) jsonMetadata.put('people', people.join('|'))
+            if (tags) jsonMetadata.put('tags', tags.join('|'))
+            if (notes) jsonMetadata.put('notes', notes)
+
+            return jsonMetadata
+            ]]>
+        </script>
+    </groovyStep>
+
+    <saveDataObjectStep
+            name="save asset metadata"
+            jsonValuesDataDef="jsonMetadata"
+            dataObjectExpression="${asset.metadata}">
+        <transition condition="${address != null}">
+            <targetStepName>update address picklists</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>reindex</targetStepName>
+        </transition>
+    </saveDataObjectStep>
+
+
+    <groovyStep
+            name="update address picklists"
+            executionLabelExpression="Updating address picklists.. ${groovyResult}"
+            resultDataDef="groovyResult"
+            nextStep="reindex">
+        <script>
+            <![CDATA[
+            import groovy.json.JsonSlurper
+
+            def typeAddressesId
+            def nameAddressesId
+
+            def result = 'Results?'
+
+            // Get all Picklist metadata fields
+            picklistMetaPropsJSON = new JsonSlurper().parseText(queryReach('GET', '/reachengine/api/metadata-properties?propertyType=lookup&fetchLimit=1000', null))
+
+            // Find the IDs for the picklists where the display name of the picklist itself is '<label> Addresses'
+            picklistMetaPropsJSON.rows.each { row ->
+                if (locationType != null && row.displayName == locationTypeLabel + ' Addresses') typeAddressesId = row.id
+                if (locationName != null && row.displayName == locationNameLabel + ' Addresses') nameAddressesId = row.id
+            }
+
+            if (locationType && typeAddressesId) {
+                typeAddressPicklistItems = new JsonSlurper().parseText(queryReach('GET', '/reachengine/api/metadata-properties/' + typeAddressesId + '/picklist-items?limit=1000', null))
+
+                typeAddressExists = (typeAddressPicklistItems.find { typeItem ->
+                    if (typeItem.displayName == address) return true
+                })
+
+                if (!typeAddressExists) {
+                    queryReach('PUT', '/reachengine/api/metadata-properties/' + typeAddressesId + '/add-picklist-items', '[{"displayName":"' + address +'"}]')
+                    result += ' Updated Type Address List!'
+                } else { result += ' Type Address List not updated.' }
+            }
+
+            if (locationName && nameAddressesId) {
+                nameAddressPicklistItems = new JsonSlurper().parseText(queryReach('GET', '/reachengine/api/metadata-properties/' + nameAddressesId + '/picklist-items?limit=1000', null))
+
+                nameAddressExists = (nameAddressPicklistItems.find { nameItem ->
+                    if (nameItem.displayName == address) return true
+                })
+
+                if (!nameAddressExists) {
+                    queryReach('PUT', '/reachengine/api/metadata-properties/' + nameAddressesId + '/add-picklist-items', '[{"displayName":"' + address +'"}]')
+                    result += ' Updated Name Address List!'
+                } else { result += ' Name Address List not updated.' }
+            }
+
+            return result
+
+            String queryReach (String method, String uri, String body) {
+                connection = new URL(reachUrl + uri).openConnection()
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.setRequestProperty("apiKey", workflowApiKey)
+                connection.setRequestProperty("api-version", "2.0")
+
+                if ((method == 'POST' || method == 'PUT') && body != null) {
+                    connection.setRequestMethod(method)
+                    connection.setDoOutput(true)
+                    connection.getOutputStream().write(body.getBytes("UTF-8"))
+                }
+
+                responseCode = connection.responseCode
+                if (responseCode.equals(200)) {
+                    return connection.inputStream.text
+                } else {
+                    println('---- Query Reach FAILURE ----')
+                    println('Response Code = ' + responseCode)
+                    println('Message = ' + connection.responseMessage)
+                    println('Method = ' + method)
+                    println('URI = ' + uri)
+                    if (body != null) println('Body = ' + body)
+                    return null
+                }
+            }
+            ]]>
+        </script>
+    </groovyStep>
+
+    <raiseWorkflowEventStep
+            name="reindex"
+            eventTypeExpression="ensureIndexed"
+            executionLabelExpression="Ensure Asset Indexed"
+            nextStep="end">
+        <property name="indexTargetRef">${asset}</property>
+    </raiseWorkflowEventStep>
+
+    <createFailureNotificationStep
+            name="notify nothing to do"
+            notificationTypeExpression="error"
+            notificationBodyExpression="You didn't set any metadata to update!!"
+            nextStep="nothing to do"/>
+
+    <noopStep name="nothing to do"/>
+    <noopStep name="end"/>
+
+    <!-- Input -->
+    <contextDataDef name="locationType" label="1. Location Type" dataType="String" userInput="true">
+        <picklist>
+            <metadataProperty>locationType</metadataProperty>
+        </picklist>
+    </contextDataDef>
+    <contextDataDef name="locationName" label="2. Location Name" dataType="String" userInput="true">
+        <picklist>
+            <metadataProperty>locationName</metadataProperty>
+        </picklist>
+    </contextDataDef>
+    <contextDataDef name="people" label="3. People" dataType="String" userInput="true" multiple="true">
+        <picklist>
+            <metadataProperty>people</metadataProperty>
+        </picklist>
+    </contextDataDef>
+    <contextDataDef name="tags" label="4. Tags" dataType="String" userInput="true" multiple="true">
+        <picklist>
+            <metadataProperty>tags</metadataProperty>
+        </picklist>
+    </contextDataDef>
+    <contextDataDef name="notes" label="5. Notes" dataType="String" userInput="true"/>
+
+    <contextDataDef name="asset" dataType="Data Object" defaultDataExpression="${subject}"/>
+
+    <!-- Internal -->
+    <contextDataDef name="address" dataType="String" defaultDataExpression="${asset.metadata.address}"/>
+    <contextDataDef name="locationTypeLabel" dataType="String" defaultDataExpression="${#picklistLabel('locationType', locationType)}"/>
+    <contextDataDef name="locationNameLabel" dataType="String" defaultDataExpression="${#picklistLabel('locationName', locationName)}"/>
+
+    <contextDataDef name="reachUrl" dataType="String" defaultDataExpression="${#sysconfig('reachengine.url')}"/>
+    <contextDataDef name="workflowApiKey" dataType="String" defaultDataExpression="${#sysconfig('workflow.api.key')}"/>
+    <contextDataDef name="jsonMetadata" dataType="JSON" defaultDataExpression="{}"/>
+
+    <contextDataDef name="assetsSameAddress" dataType="Data Object" multiple="true"/>
+    <contextDataDef name="offset" dataType="Integer" defaultDataExpression="0"/>
+    <contextDataDef name="limit" dataType="Integer" defaultDataExpression="50"/>
+    <contextDataDef name="groovyResult" dataType="String"/>
+</workflow>

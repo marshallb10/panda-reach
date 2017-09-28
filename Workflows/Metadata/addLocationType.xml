@@ -1,0 +1,80 @@
+<workflow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns="http://levelsbeyond.com/schema/workflow"
+          xmlns:nimbus="http://levelsbeyond.com/schema/workflow/nimbus"
+          xsi:schemaLocation="http://levelsbeyond.com/schema/workflow http://www.levelsbeyond.com/schema/latest/studio.xsd"
+          id="addLocationType"
+          name="Add Location Type"
+          executionLabelExpression="Add Location Type - ${locationType}"
+          description=""
+          group="Config Updates"
+          showInUserInterface="true"
+          subjectDOClassName=""
+          subjectQualifierExpression=""
+          sdkVersion="">
+
+    <initialStepName>be groovy</initialStepName>
+
+    <groovyStep
+            name="be groovy"
+            executionLabelExpression="Result = ${groovyResult}"
+            resultDataDef="groovyResult"
+            nextStep="end">
+        <script>
+            <![CDATA[
+            import groovy.json.JsonSlurper
+
+            locationTypePicklistItems = new JsonSlurper().parseText(queryReach('GET', '/reachengine/api/metadata-properties/' + locationTypeMetaId + '/picklist-items?limit=1000', null))
+
+            // Bail if locationName is already an item in the Location Type picklist
+            if (locationTypePicklistItems.find { item ->
+                if (item.displayName == locationType) return true
+            }) return locationType + ' already exists in the Location Type picklist! No update necessary'
+
+            // Add to location type picklist
+            queryReach('PUT', '/reachengine/api/metadata-properties/' + locationTypeMetaId + '/add-picklist-items', '[{"displayName":"' + locationType +'"}]')
+
+            // Create new metadata picklist of locationType + ' Addresses'
+            return queryReach('POST', '/reachengine/api/metadata-properties', '{"name": "' + locationType + ' Addresses", "type": "lookup", "multiple": false, "showInInspector": false}')
+
+
+            String queryReach (String method, String uri, String body) {
+                connection = new URL(reachUrl + uri).openConnection()
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.setRequestProperty("apiKey", workflowApiKey)
+                connection.setRequestProperty("api-version", "2.0")
+
+                if ((method == 'POST' || method == 'PUT') && body != null) {
+                    connection.setRequestMethod(method)
+                    connection.setDoOutput(true)
+                    connection.getOutputStream().write(body.getBytes("UTF-8"))
+                }
+
+                responseCode = connection.responseCode
+                if (responseCode.equals(200)) {
+                    return connection.inputStream.text
+                } else {
+                    println('---- Query Reach FAILURE ----')
+                    println('Response Code = ' + responseCode)
+                    println('Message = ' + connection.responseMessage)
+                    println('Method = ' + method)
+                    println('URI = ' + uri)
+                    if (body != null) println('Body = ' + body)
+                    return null
+                }
+            }
+            ]]>
+        </script>
+    </groovyStep>
+
+    <noopStep name="end"/>
+
+    <!-- Input -->
+    <contextDataDef name="locationType" dataType="String" userInput="true" required="true"/>
+
+    <!-- Internal -->
+    <contextDataDef name="locationTypeMetaId" dataType="String" defaultDataExpression="${#sysconfig('metadata.locationType.id')}"/>
+    <contextDataDef name="groovyResult" dataType="String"/>
+
+    <contextDataDef name="reachUrl" dataType="String" defaultDataExpression="${#sysconfig('reachengine.url')}"/>
+    <contextDataDef name="workflowApiKey" dataType="String" defaultDataExpression="${#sysconfig('workflow.api.key')}"/>
+</workflow>

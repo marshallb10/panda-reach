@@ -4,7 +4,7 @@
           xsi:schemaLocation="http://levelsbeyond.com/schema/workflow http://www.levelsbeyond.com/schema/latest/studio.xsd"
           id="pandaIngestAsset"
           name="Ingest Asset"
-          executionLabelExpression="Ingest Asset - ${fileToIngest.name}"
+          executionLabelExpression="Ingest Asset - ${#filename(fileToIngest)}"
           description=""
           showInUserInterface="true"
           subjectDOClassName=""
@@ -26,7 +26,7 @@
 
     <runCommandStep
             name="get exif data"
-            executionLabelExpression="Extracting exif.. Result: ${exifMeta.toString().length() > 3500 ? exifMeta.toString().substring(exifMeta.toString().length() - 3500) : exifMeta.toString()}"
+            executionLabelExpression="Extracting exif.. Result: ${exifMetaJson.toString().length() > 3500 ? exifMetaJson.toString().substring(exifMetaJson.toString().length() - 3500) : exifMetaJson.toString()}"
             executablePathExpression="${#sysconfig('exiftool.path')}"
             stdoutDataDef="exifMetaJson">
         <transition condition="${exifMetaJson != null and exifMetaJson.size() > 0 and exifMetaJson.CreateDate != null}">
@@ -35,7 +35,7 @@
         <transition condition="true">
             <targetStepName>check for existing source</targetStepName>
         </transition>
-        <arg>${fileToIngest.absolutePath}</arg>
+        <arg>${#absPath(fileToIngest)}</arg>
         <arg>-j</arg>
     </runCommandStep>
 

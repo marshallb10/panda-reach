@@ -1,0 +1,40 @@
+<workflow xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xmlns="http://levelsbeyond.com/schema/workflow"
+          xmlns:nimbus="http://levelsbeyond.com/schema/workflow/nimbus"
+          xsi:schemaLocation="http://levelsbeyond.com/schema/workflow http://www.levelsbeyond.com/schema/latest/studio.xsd"
+          id="fixSourcePath"
+          name="Fix Source Path"
+          executionLabelExpression="Fix Source Path - ${asset.name}"
+          description=""
+          showInUserInterface="true"
+          subjectDOClassName="AssetMaster"
+          subjectQualifierExpression=""
+          sdkVersion="">
+
+    <initialStepName>save asset</initialStepName>
+
+    <saveAssetStep
+            name="save asset"
+            contentExpression="${sourceFilePath}"
+            contentUseExpression="|SOURCE|MEZZANINE|"
+            versionAssetExpression="${false}"
+            assetExpression="${subject}"
+            nextStep="reindex">
+    </saveAssetStep>
+
+    <raiseWorkflowEventStep
+            name="reindex"
+            eventTypeExpression="ensureIndexed"
+            executionLabelExpression="Ensure Asset Indexed"
+            nextStep="end">
+        <property name="indexTargetRef">${asset}</property>
+    </raiseWorkflowEventStep>
+
+    <noopStep name="end"/>
+
+    <!-- Input -->
+    <contextDataDef name="asset" dataType="Data Object" defaultDataExpression="${subject}"/>
+
+    <!-- Internal -->
+    <contextDataDef name="sourceFilePath" dataType="String" defaultDataExpression="${subject.originalContent.file.absolutePath}"/>
+</workflow>

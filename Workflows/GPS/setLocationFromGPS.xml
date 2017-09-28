@@ -107,173 +107,65 @@
             locationJson.put('googleMapsUrl', 'https://www.google.com/maps/search/?api=1&query=' + java.net.URLEncoder.encode(formattedAddress, "UTF-8") + '&query_place_id=' + googleMapsID)
             locationJson.put('appleMapsUrl', 'http://maps.apple.com/?address' + java.net.URLEncoder.encode(formattedAddress, "UTF-8"))
 
-            if (formattedAddress.contains('Owens') ||
-                    formattedAddress.equals('10901-10931 W 100th Way, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10101-10177 Countryside Dr, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10200-10298 W 101st Pl, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10920 W 100th Way, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10931 W 100th Way, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10092 Oak Cir, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('9907 W 99th Pl, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10541 W 101st Ave, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('9869 Kline St, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('Kipling Way, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('W 97th Dr, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10900-10904 W 102nd Cir, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('9950 W 100th Ave, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('9837-9847 W 99th Pl, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('9035 W 96th Dr, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10011 Lewis Ct, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10040-10060 W 101st Dr, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10045-10089 Countryside Dr, Westminster, CO 80021, USA')) {
-                locationJson.put('location', 'Home')
-                return locationJson
-            }
+            def city
+            def state
+            def country
 
-            if (formattedAddress.equals('8430 Church Ranch Blvd, Broomfield, CO 80021, USA') ||
-                    formattedAddress.equals('10001-10045 Dover St, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('8700 Church Ranch Blvd, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('8510 Church Ranch Blvd, Broomfield, CO 80021, USA') ||
-                    formattedAddress.equals('8430 Church Ranch Blvd, Broomfield, CO 80021, USA') ||
-                    formattedAddress.equals('8471-8563 Church Ranch Blvd, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('8900-8998 W 100th Ave, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('8300-8766 W 100th Ave, Westminster, CO 80021, USA')) {
-                locationJson.put('location', 'Primrose')
-                return locationJson
-            }
-
-            // Restaurants
-            if (formattedAddress.equals('7475 W 88th Ave, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('14697 Delaware St, Westminster, CO 80023, USA') ||
-                    formattedAddress.equals('7347 W 55th Ave, Arvada, CO 80002, USA') ||
-                    formattedAddress.equals('8354 Quay Dr, Arvada, CO 80003, USA') ||
-                    formattedAddress.equals('7254 W 84th Way, Arvada, CO 80003, USA') ||
-                    formattedAddress.equals('7767 W 87th Dr, Arvada, CO 80005, USA') ||
-                    formattedAddress.equals('7525-7563 W 88th Ave, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('7563 W 88th Ave, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10431 Town Center Dr, Broomfield, CO 80021, USA') ||
-                    formattedAddress.equals('10414-10426 Town Center Dr, Westminster, CO 80021, USA, USA') ||
-                    formattedAddress.equals('10415-10429 Town Center Dr, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10404-10412 Town Center Dr, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10414-10426 Town Center Dr, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10300-10318 Reed St, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10434-10436 Town Center Dr, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10435-10443 Town Center Dr, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10436 Town Center Dr, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('1001 W 120th Ave, Westminster, CO 80234, USA') ||
-                    formattedAddress.equals('8770 W 88th Ave, Arvada, CO 80003, USA') ||
-                    formattedAddress.equals('9201-9299 W 99th Ave, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('8983 Wadsworth Pkwy, Westminster, CO 80005, USA') ||
-                    formattedAddress.equals('7640-7658 W 90th Ave, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('7660-7678 W 90th Ave, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('7175 W 88th Ave, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('7275 W 88th Ave, Westminster, CO 80021, USA')) {
-                locationJson.put('location', 'Restaurant')
-                return locationJson
-            }
-            if (formattedAddress.equals('14694 Orchard Pkwy, Westminster, CO 80023, USA') ||
-                    formattedAddress.equals('16494 Orchard Pkwy, Westminster, CO 80023, USA') ||
-                    formattedAddress.equals('I-25, Westminster, CO 80023, USA')) {
-                locationJson.put('location', 'Pigtails and Crewcuts')
-                return locationJson
-            }
-
-            // Random Parks
-            if (formattedAddress.equals('Big Dry Creek Trail, Englewood, CO 80110, USA') ||
-                    formattedAddress.equals('10441 Newcombe St, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('10481 Newcombe St, Westminster, CO 80021, USA')) {
-                locationJson.put('location', 'Park')
-                return locationJson
-            }
-
-            // Random Doctor
-            if (formattedAddress.equals('9017-9023 Wadsworth Pkwy, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('403 Summit Blvd, Broomfield, CO 80021, USA') ||
-                    formattedAddress.equals('9035-9039 Wadsworth Pkwy, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('9027 Wadsworth Pkwy, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('9035 Wadsworth Pkwy, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('9905 Hoyt Ln, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('9404 W 99th Way, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('400 Indiana St, Lakewood, CO 80401, USA') ||
-                    formattedAddress.equals('9041-9057 Wadsworth Pkwy, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('9033-9035 Wadsworth Pkwy, Westminster, CO 80021, USA') ||
-                    formattedAddress.equals('9029-9031 Wadsworth Pkwy, Westminster, CO 80021, USA')) {
-                locationJson.put('location', 'Doctor')
-                return locationJson
-            }
-
-            if (formattedAddress.contains('Denver')) {
-                locationJson.put('location', 'Denver')
-                return locationJson
-            }
-            if (formattedAddress.contains('Boulder')) {
-                locationJson.put('location', 'Boulder')
-                return locationJson
-            }
-            if (formattedAddress.contains('Louisville')) {
-                locationJson.put('location', 'Louisville')
-                return locationJson
-            }
-            if (formattedAddress.contains('Broomfield')) {
-                locationJson.put('location', 'Broomfield')
-                return locationJson
-            }
-            if (formattedAddress.contains('Erie')) {
-                locationJson.put('location', 'Erie')
-                return locationJson
-            }
-            if (formattedAddress.contains('Golden') || formattedAddress.equals('18300 Alameda Pkwy, Morrison, CO 80465, USA')) {
-                locationJson.put('location', 'Golden')
-                return locationJson
-            }
-            if (formattedAddress.contains('Durango')) {
-                locationJson.put('location', 'Durango')
-                return locationJson
-            }
-            if (formattedAddress.contains('Kona')) {
-                locationJson.put('location', 'Kona')
-                return locationJson
-            }
-            if (formattedAddress.contains('Redlands')) {
-                locationJson.put('location', 'Redlands')
-                return locationJson
-            }
-            if (formattedAddress.contains('Rancho Santa Margarita')) {
-                locationJson.put('location', 'Rancho Santa Margarita')
-                return locationJson
-            }
-            if (formattedAddress.contains('Yucca Valley')) {
-                locationJson.put('location', 'Yucca Valley')
-                return locationJson
-            }
-            if (formattedAddress.contains('Las Vegas')) {
-                locationJson.put('location', 'Las Vegas')
-                return locationJson
-            }
-            if (formattedAddress.contains('Phoenix') || (formattedAddress.contains('Surprise') && formattedAddress.contains('AZ'))) {
-                locationJson.put('location', 'Phoenix')
-                return locationJson
-            }
-            if (formattedAddress.contains('6400') && formattedAddress.contains('Westminster')) {
-                locationJson.put('location', 'Costco')
-                return locationJson
-            }
-
-
-            locationPicklistItems = new JsonSlurper().parseText(queryReach('GET', '/reachengine/api/metadata-properties/' + locationMetaId + '/picklist-items?limit=500', null))
-
-            exists = false
-            locationPicklistItems.each { item ->
-                if (item.displayName == formattedAddress) {
-                    exists = true
+            googleResponseJson.results.get(0).address_components.each { component ->
+                component.types.each { type ->
+                    if (type.asText() == 'locality') city = component.long_name.asText()
+                    if (type.asText() == 'administrative_area_level_1') state = component.long_name.asText()
+                    if (type.asText() == 'country') country = component.long_name.asText()
                 }
             }
-            if (!exists) {
-                queryReach('PUT', '/reachengine/api/metadata-properties/' + locationMetaId + '/add-picklist-items', '[{"displayName":"' + formattedAddress +'"}]')
+
+            if (country) {
+                // Only add state if country is US
+                if (country == 'United States' && state) locationJson.put('state', state)
+
+                countryPicklistItems = new JsonSlurper().parseText(queryReach('GET', '/reachengine/api/metadata-properties/' + countryMetaId + '/picklist-items?limit=1000', null))
+                countryExists = (countryPicklistItems.find { item ->
+                    if (item.displayName == country) return true
+                })
+                if (!countryExists) queryReach('PUT', '/reachengine/api/metadata-properties/' + countryMetaId + '/add-picklist-items', '[{"displayName":"' + country +'"}]')
+
+                locationJson.put('country', country)
             }
 
-            locationJson.put('location', formattedAddress)
+
+            if (city) {
+                cityPicklistItems = new JsonSlurper().parseText(queryReach('GET', '/reachengine/api/metadata-properties/' + cityMetaId + '/picklist-items?limit=1000', null))
+                cityExists = (cityPicklistItems.find { item ->
+                    if (item.displayName == city) return true
+                })
+                if (!cityExists) queryReach('PUT', '/reachengine/api/metadata-properties/' + cityMetaId + '/add-picklist-items', '[{"displayName":"' + city +'"}]')
+
+                locationJson.put('city', city)
+            }
+
+            locationNamePicklistItems = new JsonSlurper().parseText(queryReach('GET', '/reachengine/api/metadata-properties/' + locationNameMetaId + '/picklist-items?limit=1000', null))
+            locationTypePicklistItems = new JsonSlurper().parseText(queryReach('GET', '/reachengine/api/metadata-properties/' + locationTypeMetaId + '/picklist-items?limit=1000', null))
+
+            // Get all Picklist metadata fields
+            picklistMetaPropsJSON = new JsonSlurper().parseText(queryReach('GET', '/reachengine/api/metadata-properties?propertyType=lookup&fetchLimit=1000', null))
+
+            // Check each metadata picklist in the system to determine if there's an exact match on the address
+            picklistMetaPropsJSON.rows.each { row ->
+                picklistItems = new JsonSlurper().parseText(queryReach('GET', '/reachengine/api/metadata-properties/' + row.id + '/picklist-items?limit=5000', null))
+                if (picklistItems.find { item ->
+                    if (item.displayName == formattedAddress) return true
+                }) {
+                    if (locationNamePicklistItems.find { locationNameItem ->
+                        if (locationNameItem.displayName == row.displayName.replace(' Addresses', '')) return true
+                    }) locationJson.put('locationName', row.displayName.replace(' Addresses', ''))
+                    if (locationTypePicklistItems.find { locationTypeItem ->
+                        if (locationTypeItem.displayName == row.displayName.replace(' Addresses', '')) return true
+                    }) locationJson.put('locationType', row.displayName.replace(' Addresses', ''))
+                }
+            }
+
             return locationJson
+
 
             String queryReach (String method, String uri, String body) {
                 connection = new URL(reachUrl + uri).openConnection()
@@ -306,6 +198,7 @@
 
     <saveDataObjectStep
             name="save location metadata"
+            jsonValuesDataDef="locationJson"
             dataObjectExpression="${asset.metadata}">
         <transition condition="${locationJson.address != null}">
             <targetStepName>save google maps link metadata result</targetStepName>
@@ -313,9 +206,7 @@
         <transition condition="true">
             <targetStepName>reindex</targetStepName>
         </transition>
-        <property name="location">${locationJson.location}</property>
     </saveDataObjectStep>
-
 
     <setAssociationMetadataStep
             name="save google maps link metadata result"
@@ -356,10 +247,14 @@
     <contextDataDef name="googleResponseJson" dataType="JSON"/>
 
     <contextDataDef name="locationJson" dataType="JSON" defaultDataExpression="{}"/>
-    <contextDataDef name="locationMetaId" dataType="String" defaultDataExpression="${#sysconfig('metadata.location.id')}"/>
+    <contextDataDef name="cityMetaId" dataType="String" defaultDataExpression="${#sysconfig('metadata.city.id')}"/>
+    <contextDataDef name="countryMetaId" dataType="String" defaultDataExpression="${#sysconfig('metadata.country.id')}"/>
+    <contextDataDef name="locationTypeMetaId" dataType="String" defaultDataExpression="${#sysconfig('metadata.locationType.id')}"/>
+    <contextDataDef name="locationNameMetaId" dataType="String" defaultDataExpression="${#sysconfig('metadata.locationName.id')}"/>
+
     <contextDataDef name="reachUrl" dataType="String" defaultDataExpression="${#sysconfig('reachengine.url')}"/>
     <contextDataDef name="workflowApiKey" dataType="String" defaultDataExpression="${#sysconfig('workflow.api.key')}"/>
 
-    <contextDataDef name="googleMapsMetaValue" dataType="String"/>
-    <contextDataDef name="appleMapsMetaValue" dataType="String"/>
+    <contextDataDef name="appleMapsJson" dataType="String" defaultDataExpression="${asset.metadata.appleMaps}"/>
+    <contextDataDef name="testAddress" dataType="String"/>
 </workflow>
