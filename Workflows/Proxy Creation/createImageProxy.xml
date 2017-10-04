@@ -4,7 +4,7 @@
 		  xsi:schemaLocation="http://levelsbeyond.com/schema/workflow http://www.levelsbeyond.com/schema/latest/studio.xsd"
 		  id="createImageProxy"
 		  name="Create Image Proxy"
-          executionLabelExpression="Craete Image Proxy for ${assetMaster.name}"
+          executionLabelExpression="Craete Image Proxy for ${subject.name}"
           description="" 
           subjectDOClassName="ImageAssetMaster"
           showInUserInterface="false" 
