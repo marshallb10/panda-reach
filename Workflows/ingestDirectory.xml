@@ -4,7 +4,7 @@
           xsi:schemaLocation="http://levelsbeyond.com/schema/workflow http://www.levelsbeyond.com/schema/latest/studio.xsd"
           id="ingestDirectory"
           name="Ingest Directory"
-          executionLabelExpression="Ingest Directory - ${directory.name}"
+          executionLabelExpression="Ingest Directory - ${directory.name}. ${recordCount} of ${startTotal} remaining."
           description=""
           showInUserInterface="true"
           subjectDOClassName=""
@@ -28,7 +28,7 @@
             name="set record count"
             targetDataDef="recordCount"
             valueExpression="${allFiles.size()}"
-            executionLabelExpression="recordCount is ${recordCount}">
+            executionLabelExpression="Remaining count: ${recordCount}">
         <transition condition="${ recordCount != 0 }">
             <targetStepName>set end index</targetStepName>
         </transition>

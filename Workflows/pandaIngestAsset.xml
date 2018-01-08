@@ -33,22 +33,37 @@
             <targetStepName>set dates</targetStepName>
         </transition>
         <transition condition="true">
-            <targetStepName>check for existing source</targetStepName>
+            <targetStepName>copy to bad dates</targetStepName>
         </transition>
         <arg>${#absPath(fileToIngest)}</arg>
         <arg>-j</arg>
     </runCommandStep>
 
+    <!--
+        Date checking and repo structure:
+        - The repo structure is ../yyyy/MM/dd
+        - A valid create date is needed to ingest. To-Do: Add ability to bypass create date OR user-input create date
+        - Check if CreateDate exists and is not 00:00:00
+            - More checks to come (when looking at old files from old cameras where I need to find the create date differently)
+            - If a valid Create Date isn't found, then move (copy/delete) the file into a badDates location for review
+        - With valid create date, set the repo path and check to see if a file already exists with the same path/name
+            - If no match, then proceed with ingest
+            - If match, then check the complete create date (with HH/mm/ss) to determine if it is indeed a duplicate
+                - If duplicate, move into the duplicates location
+                - If not a duplicate, then call the copyFileStep that brings the file into the repository.
+                ** A file will already exist there- the copyFileStep logic will rename the file automatically **
+    -->
     <setContextData
             name="set dates"
             executionLabelExpression="Create Date = ${createDate}. Year = ${#formatDate('yyyy', createDate)}. Month = ${#formatDate('MMMM', createDate)}. Day = ${#formatDate('d', createDate)}. Day of week = ${#formatDate('EEEE', createDate)}.">
-        <transition condition="${createDate != null}">
+        <transition condition="${createDate != null and !localDateTime.contains('0000:00:00') and !localDateTime.contains('00:00:00')}">
             <targetStepName>update date path</targetStepName>
         </transition>
         <transition condition="true">
-            <targetStepName>check for existing source</targetStepName>
+            <targetStepName>copy to bad dates</targetStepName>
         </transition>
         <set targetDataDef="createDate" valueExpression="${#parseDate(exifMetaJson.CreateDate, 'yyyy:MM:dd')}"/>
+        <set targetDataDef="completeDate" valueExpression="${#parseDate(exifMetaJson.CreateDate, 'yyyy:MM:dd HH:mm:ss')}"/>
         <set targetDataDef="localDateTime" valueExpression="${exifMetaJson.CreateDate}"/>
     </setContextData>
 
@@ -69,12 +84,52 @@
             name="check for existing source"
             executionLabelExpression="Source already in repo (${sourceRepoPath + fileName})? ${#fileExists(sourceRepoPath + fileName)}">
         <transition condition="${#fileExists(sourceRepoPath + fileName)}">
-            <targetStepName>copy to duplicates</targetStepName>
+            <targetStepName>get exif data of existing</targetStepName>
         </transition>
         <transition condition="true">
             <targetStepName>copy to source repo</targetStepName>
         </transition>
     </noopStep>
+
+    <runCommandStep
+            name="get exif data of existing"
+            executionLabelExpression="Extracting exif from existing.. Result: ${exifMetaJson.toString().length() > 3500 ? exifMetaJson.toString().substring(exifMetaJson.toString().length() - 3500) : exifMetaJson.toString()}"
+            executablePathExpression="${#sysconfig('exiftool.path')}"
+            stdoutDataDef="exifMetaJsonExisting">
+        <transition condition="${exifMetaJsonExisting != null and exifMetaJsonExisting.size() > 0 and exifMetaJsonExisting.CreateDate != null}">
+            <targetStepName>set existing complete date</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>copy to duplicates</targetStepName>
+        </transition>
+        <arg>${sourceRepoPath + fileName}</arg>
+        <arg>-j</arg>
+    </runCommandStep>
+
+    <setContextData
+            name="set existing complete date"
+            targetDataDef="existingCompleteDate"
+            valueExpression="${#parseDate(exifMetaJsonExisting.CreateDate, 'yyyy:MM:dd HH:mm:ss')}"
+            executionLabelExpression="Existing Complete Date = ${existingCompleteDate}. Same as new file? ${existingCompleteDate.equals(completeDate)}">
+        <transition condition="${existingCompleteDate.equals(completeDate)}">
+            <targetStepName>copy to duplicates</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>copy to source repo</targetStepName>
+        </transition>
+    </setContextData>
+
+    <copyFileStep
+            name="copy to bad dates"
+            sourceFileExpression="${fileToIngest}"
+            targetDirectoryExpression="${#sysconfig('filesystem.root.badDates')}">
+        <transition condition="${deleteUponSuccess}">
+            <targetStepName>delete original file</targetStepName>
+        </transition>
+        <transition condition="true">
+            <targetStepName>end</targetStepName>
+        </transition>
+    </copyFileStep>
 
     <copyFileStep
             name="copy to duplicates"
@@ -210,8 +265,11 @@
     <!-- Internal -->
     <contextDataDef name="mediaType" dataType="String" defaultDataExpression="${#mediaType(fileToIngest)}"/>
     <contextDataDef name="exifMetaJson" dataType="JSON"/>
+    <contextDataDef name="exifMetaJsonExisting" dataType="JSON"/>
 
     <contextDataDef name="createDate" dataType="Date/Time"/>
+    <contextDataDef name="completeDate" dataType="Date/Time"/>
+    <contextDataDef name="existingCompleteDate" dataType="Date/Time"/>
     <contextDataDef name="localDateTime" dataType="String"/>
     <contextDataDef name="fileName" dataType="String" defaultDataExpression="${#filename(fileToIngest)}"/>
     <contextDataDef name="fileInRepo" dataType="File"/>
